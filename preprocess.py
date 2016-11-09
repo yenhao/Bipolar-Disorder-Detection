@@ -1,17 +1,13 @@
 
 # coding: utf-8
 
+# regular expression
+import re
 
 # function to delete url
 def del_url(line):
-    seg_result = ''
-    for seg in line.split(' '):
-#     if the split-part contain url, make this segment to be '' empty
-        if seg[:7] == 'http://' or seg[:8] == 'https://':
-            seg = ''
-#     re-assemble the sentence
-        seg_result += seg + ' '
-    return seg_result
+
+    return re.sub(r'https?:\/\/.*', "", line)
 
 buffer_line = []
 
