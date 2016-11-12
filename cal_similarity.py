@@ -29,7 +29,7 @@ def cosine_similarity(v1,v2):
     return sumxy/math.sqrt(sumxx*sumyy)
 
 # to get the file name list in the folder
-folder_file_list = [folder_file for folder_file in os.listdir(".") if folder_file[-3:] == 'csv']
+folder_file_list = [folder_file for folder_file in os.listdir('your csv directory') if folder_file[-3:] == 'csv']
 folder_file_dict = {}
 for folder_file in folder_file_list:
     folder_file_dict[folder_file] = get_common_word_dict(folder_file)
