@@ -30,10 +30,9 @@ def cosine_similarity(v1,v2):
 
 # to get the file name list in the folder
 folder_file_list = [folder_file for folder_file in os.listdir('your csv directory') if folder_file[-3:] == 'csv']
-folder_file_dict = {}
-for folder_file in folder_file_list:
-    folder_file_dict[folder_file] = get_common_word_dict(folder_file)
-# fill in attribute list
+# store filename to be key and pattern value dictionary to folder_file_dict
+folder_file_dict = {folder_file : get_common_word_dict(folder_file) for folder_file in folder_file_list }
+# fill in every attribute into list, not allow repeat one
 attr_list = []
 for folder_file in folder_file_dict:
     for each_attr in folder_file_dict[folder_file]:
@@ -48,4 +47,4 @@ for folder_file in folder_file_dict:
 # Calculate similarity
 for each_compare in folder_file_list:
     for each_compared in folder_file_list[folder_file_list.index(each_compare)+1:]:
-        print 'Similarity -> ' + each_compare + ' & ' + each_compared + ' : ' + str(cosine_similarity(file_freq_list_dict[each_compare],file_freq_list_dict[each_compared]))
+        print '\nSimilarity -> ' + each_compare + ' & ' + each_compared + ' : ' + str(cosine_similarity(file_freq_list_dict[each_compare],file_freq_list_dict[each_compared]))
