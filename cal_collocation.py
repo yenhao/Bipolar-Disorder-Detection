@@ -1,21 +1,22 @@
-
 # coding: utf-8
 
+from __future__ import division
 import nltk
- 
-# - $p_j^i$ 
+from nltk.tokenize import  wordpunct_tokenize 
+from nltk.corpus import stopwords 
+from collections import defaultdict, Counter
+from itertools import izip 
+import pandas
 # - ngram 任何位置不包含符號
 # - skip bigram 不包含 stop words 與數字
 
-from __future__ import division
 
 k0 = 1
 k1 = 1
 U0 = 10
 max_distance = 5
 
-from nltk.tokenize import  wordpunct_tokenize 
-from nltk.corpus import stopwords 
+
 
 eng_stopwords = set(stopwords.words('english'))
 eng_symbols = '{}"\'()[].,:;+!?-*/&|<>=~$'
@@ -27,21 +28,15 @@ def ngram_is_valid(ngram):
     if any( eng_symbol in word for word in ngram for eng_symbol in eng_symbols): return False
     return True
 
-from collections import defaultdict, Counter
-from itertools import izip
-
 def to_ngrams( unigrams, length):
     return izip(*[unigrams[i:] for i in range(length)])  
 
-from nltk.tokenize import  wordpunct_tokenize 
-
 ngram_counts = defaultdict(Counter)
-           
-
+          
 # file stynax uid <tab> tweets_contents
 with open('open_file') as text_file:
     for index,line in enumerate(text_file): 
-        split_list = line.split('t')
+        split_list = line.split('\t')
         if len(split_list) <2: continue
         words = wordpunct_tokenize(split_list[1])
         for n in range(2, max_distance + 2):
@@ -142,11 +137,8 @@ figure = dd_chart.head(100).plot(kind='bar',figsize=(20, 10))
 fig = figure.get_figure()
 fig.savefig('output_img_file',dpi= 300)
 
-
 # ## pandas Dataframe to show the data
 
-
-import pandas
 collocations_df = pandas.DataFrame(cc,
                                    columns = ['base word', 'collocate', 'distance', 'strength', 'spread', 'peak', 'p'])
 collocations_df = collocations_df.set_index(['base word', 'collocate', 'distance']).sort_index()
