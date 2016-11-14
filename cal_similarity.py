@@ -5,7 +5,8 @@ import math
 # get the dictionary of file
 # file sytnax = pattern,freq (first line is attribute)
 def get_common_word_dict(file_name):
-    with open(file_name) as open_file:
+    # your file location
+    with open('your folder location'+file_name) as open_file:
         open_file = open_file.readlines()[2:]
         freq_count = 0
         # to get the total count
@@ -28,8 +29,8 @@ def cosine_similarity(v1,v2):
         sumxy += x*y
     return sumxy/math.sqrt(sumxx*sumyy)
 
-# to get the file name list in the folder
-folder_file_list = [folder_file for folder_file in os.listdir('your csv directory') if folder_file[-3:] == 'csv']
+# to get the file name list in your file location
+folder_file_list = [folder_file for folder_file in os.listdir('your file folder location') if folder_file[-3:] == 'csv']
 # store filename to be key and pattern value dictionary to folder_file_dict
 folder_file_dict = {folder_file : get_common_word_dict(folder_file) for folder_file in folder_file_list }
 # fill in every attribute into list, not allow repeat one
