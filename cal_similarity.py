@@ -6,7 +6,7 @@ import math
 # file sytnax = pattern,freq (first line is attribute)
 def get_common_word_dict(file_name):
     # your file location
-    with open('your folder location'+file_name) as open_file:
+    with open('your csv directory'+file_name) as open_file:
         open_file = open_file.readlines()[2:]
         freq_count = 0
         # to get the total count
@@ -30,7 +30,7 @@ def cosine_similarity(v1,v2):
     return sumxy/math.sqrt(sumxx*sumyy)
 
 # to get the file name list in your file location
-folder_file_list = [folder_file for folder_file in os.listdir('your file folder location') if folder_file[-3:] == 'csv']
+folder_file_list = [folder_file for folder_file in os.listdir('your csv directory') if folder_file[-3:] == 'csv']
 # store filename to be key and pattern value dictionary to folder_file_dict
 folder_file_dict = {folder_file : get_common_word_dict(folder_file) for folder_file in folder_file_list }
 # fill in every attribute into list, not allow repeat one
@@ -49,3 +49,16 @@ for folder_file in folder_file_dict:
 for each_compare in folder_file_list:
     for each_compared in folder_file_list[folder_file_list.index(each_compare)+1:]:
         print '\nSimilarity -> ' + each_compare + ' & ' + each_compared + ' : ' + str(cosine_similarity(file_freq_list_dict[each_compare],file_freq_list_dict[each_compared]))
+# To organize the attrubute and normalized value together
+# Output compare list csv file
+with open('your pattern compare list csv file','w') as compare_file:
+    for folder_file in file_freq_list_dict:
+        compare_file.write(','+folder_file)
+    compare_file.write('\n')
+    for pattern in attr_list:
+        print_string = ''
+        print_string += pattern
+        for folder_file in file_freq_list_dict:
+            print_string += ',' + str(file_freq_list_dict[folder_file][attr_list.index(pattern)])
+        print_string += '\n'
+        compare_file.write(print_string)
