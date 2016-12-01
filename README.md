@@ -3,19 +3,20 @@
 1. Processing
  - Remove url
 
-* Input format `<userid>\t<tweet_content>`
-* Output  `<userid>\t<tweet_content_without_url>`
+  Input format `<userid>\t<tweet_content>`
+  Output  `<userid>\t<tweet_content_without_url>`
 
 2. Word count map_reduce
 
-* Input format `<userid>\t<tweet_content>`
+  Input format `<userid>\t<tweet_content>`
 
-`cat <input_file> | ./lmr 8m 8 'python3 tweets_word_count_map.py' 'python3 tweets_word_count_reduce.py' <output_folder>`
+  Run the command below in termainal
+  `cat <input_file> | ./lmr 8m 8 'python3 tweets_word_count_map.py' 'python3 tweets_word_count_reduce.py' <output_folder>`
 
 3. Calculate Word Collocation
 
-* Input format `<userid>\t<tweet_content>`
-* Output  csv file and format is frequent col-location word set `<word1-word2>,<frequence>`
+  Input format `<userid>\t<tweet_content>`
+  Output  csv file and format is frequent col-location word set `<word1-word2>,<frequence>`
 
 4. Calculate Dataset Similarity (Cosine Similarity)
 
