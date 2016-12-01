@@ -8,10 +8,14 @@ Output  `<userid>\t<tweet_content_without_url>`
 
 ##Word count map_reduce
 
+
 Input format `<userid>\t<tweet_content>`
 
-Run the command below in termainal
+Run the command below to do Word count
 `cat <input_file> | ./lmr 8m 8 'python3 tweets_word_count_map.py' 'python3 tweets_word_count_reduce.py' <output_folder>`
+
+Run the command below to merge the result to single file
+`python image.py <map_reduce_result_folder> <result_folder>`
 
 ##Calculate Word Collocation
 
