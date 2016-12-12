@@ -17,11 +17,16 @@ def checktag(list1):
             item = item.lower()
         ans_list.append(item)
     return ans_list
-# str = 'wwe ivory naked #sandra teen model topless @yenhao0218'
 
-# print(checktag(tokens(str)))
-# def tokenize(aline):
-#     word_list = [aline.split(' ') ]
+# for testing
+'''
+str = 'wwe ivory naked #sandra teen model topless @yenhao0218'
+
+print(checktag(tokens(str)))
+def tokenize(aline):
+    word_list = [aline.split(' ') ]
+'''
+# with open('user_word_count/' + <filename> + '.txt') as out:
 
 user_word_count_dict = defaultdict(lambda : defaultdict(lambda : 0))
 for line in fileinput.input():
