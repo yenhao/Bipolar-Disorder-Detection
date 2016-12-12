@@ -1,15 +1,16 @@
 import sys, gzip, re, os, fileinput
 from collections import defaultdict
-
+# cat <input_file> | ./lmr 8m 8 'python3 tweets_word_count_map.py' 'python3 tweets_word_count_reduce.py' <output_folder>
 # to get # or @ in line
 def tokens(str1): return re.findall('\@?\#?[a-zA-Z0-9]+\'?[a-zA-Z0-9]+\.*', str1)
+# to remove url
 def del_url(line): return re.sub(r'https?:\/\/.*', "", line)
 
 def checktag(list1): 
     ans_list = []
     for item in list1:
         if item[0] == '@':
-            item = '@<user>'
+            item = '<user>'
         elif item[0] == '#':
             item = '#' + item[1:].lower()
         else:
@@ -28,8 +29,7 @@ for line in fileinput.input():
     if len(split_line) != 2: continue
     uid, text = split_line
     for word in checktag(tokens(del_url(text))):
-        user_word_count_dict[uid][word] += 1
-out = open('test.txt','w')    
+        user_word_count_dict[uid][word] += 1 
 for user in user_word_count_dict:
     for word in user_word_count_dict[user]:
         print(word + '\t' + str(user_word_count_dict[user][word]))

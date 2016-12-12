@@ -1,9 +1,11 @@
+# python combine_map_reduce_result.py <map_reduce_result_folder> <result_folder>
+import operator
 import sys, os
 
 if len(sys.argv) < 3 :
     print ('Format')
     # print 'python image.py <input file> <output file>'
-    print ('python image.py <map_reduce result folder> <result_folder>')
+    print ('python image.py <map_reduce_result_folder> <result_folder>')
     sys.exit()
 
 folder = sys.argv[1]
@@ -27,6 +29,7 @@ if not os.path.exists(out_folder):
 
 with open(out_folder+'/'+folder+'.txt','w') as out_file:
     output_content = ''
-    for each_line in final_content:
-        output_content += each_line
+    output_dict = {each_line.split('\t')[0]: int(each_line.split('\t')[1]) for each_line in final_content}
+    for each_line in sorted(output_dict.items(), key=operator.itemgetter(1),reverse = True):
+        output_content += each_line[0] + '\t' + str(each_line[1]) + '\n'
     out_file.write(output_content)
