@@ -37,9 +37,9 @@ def getUserIdList():
     with open(YOUR TARGET FILE) as open_file:
         return [(line.split('\t')[0],line.split('\t')[1]) for line in open_file.readlines()]
 
-    def timeout(time):
-    print('Sleep for' + time + 'seconds..')
-    time.sleep(time)
+    def timeout(STime):
+    print('Sleep for' + str(STime) + 'seconds..')
+    time.sleep(STime)
     print('\n\n')
 
 def main():
