@@ -5,10 +5,10 @@ import got
 import tweepy
 import time
 
-consumer_key = 'PeyfirPyr57NfUNK1fj5T421C'
-consumer_secret = 'ePt3MXl5kVxpGeHqeYNvjOUztm4onuJKooan6iZgsAoa1ORp1m'
-access_token = '1527198325-GV8HbhVNfgPes1wfnknZvm1VxJ6mozUg2kZrpSs'
-access_token_secret = 'ENTLiTd5bTx3qTyjJtHhyK7J4rADkzR7s60gOid3I5rGE'
+consumer_key = ''
+consumer_secret = ''
+access_token = ''
+access_token_secret = ''
 
 count_num = 0
 
