@@ -3,6 +3,7 @@ import sys,os
 sys.path.append('GetOldTweets-python/')
 import got
 import tweepy
+import time
 
 consumer_key = 'PeyfirPyr57NfUNK1fj5T421C'
 consumer_secret = 'ePt3MXl5kVxpGeHqeYNvjOUztm4onuJKooan6iZgsAoa1ORp1m'
@@ -36,6 +37,10 @@ def getUserIdList():
     with open(YOUR TARGET FILE) as open_file:
         return [(line.split('\t')[0],line.split('\t')[1]) for line in open_file.readlines()]
 
+    def timeout(time):
+    print('Sleep for' + time + 'seconds..')
+    time.sleep(time)
+    print('\n\n')
 
 def main():
     #twitter api setup
@@ -75,6 +80,7 @@ def main():
         tweetCriteria = got.manager.TweetCriteria().setUsername(username).setUntil(YOUR ENDING DATE)
         got.manager.TweetManager.getTweets(tweetCriteria, tweetsToFile, 100)
         print('\n\n')
+        timeout(count_num/80)
 
         
 
