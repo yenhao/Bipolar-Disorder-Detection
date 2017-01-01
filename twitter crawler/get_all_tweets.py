@@ -4,6 +4,7 @@ sys.path.append('GetOldTweets-python/')
 import got
 import tweepy
 import time
+from datetime import datetime
 
 consumer_key = ''
 consumer_secret = ''
@@ -58,11 +59,12 @@ def main():
         except:
             print('UserID ' + userID + ' is not found on Twitter..')
             continue
-
-        print('Crawling every tweets of ' + username + '..')
+#         To show the process start time    
+        print(str(datetime.now())[:-7])
+        print('Crawling every tweets of ' + username + ' ..')
 
         def tweetsToFile(tweets):
-            out_folder = 'user_tweets'
+            out_folder = 'YOUR OUTPUT FOLDER'
             # make sure have output folder
             if not os.path.exists(out_folder):
                 os.makedirs(out_folder)
