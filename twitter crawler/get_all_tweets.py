@@ -76,7 +76,7 @@ def main():
 
             global count_num
             count_num += len(tweets)
-            print('Total ' + str(count_num) + ' tweets in ' + out_folder + '/' +userID)
+            print(str(datetime.now())[:-7] + '\tTotal ' + str(count_num) + ' tweets in ' + out_folder + '/' +userID)
             
 
         tweetCriteria = got.manager.TweetCriteria().setUsername(username).setUntil(YOUR ENDING DATE)
