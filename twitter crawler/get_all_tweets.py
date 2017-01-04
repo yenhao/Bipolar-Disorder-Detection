@@ -49,7 +49,8 @@ def main():
     auth.set_access_token(access_token, access_token_secret)
     api = tweepy.API(auth)
     user_list = getUserIdList()
-    for id_num_tuple in user_list[59:]:
+    # Check every user in your list
+    for id_num_tuple in user_list:
         global count_num
         count_num = 0
         userID = id_num_tuple[0]
@@ -62,12 +63,21 @@ def main():
 #         To show the process start time    
         print(str(datetime.now())[:-7])
         print('Crawling every tweets of ' + username + ' ..')
-
+        
+        # To detect if the file has been collect before
+        # If repeat, continue to next one
+        out_folder = 'YOUR OUTPUT FOLDER'
+        if os.path.exists(out_folder + '/' + userID):
+            print('Duplicate user: ' + userID +'\n')
+            continue
+            
+        # Method to handle the tweet buffer
+        # From got.manager.TweetManager.getTweets(tweetCriteria, tweetsToFile, 100)
         def tweetsToFile(tweets):
-            out_folder = 'YOUR OUTPUT FOLDER'
             # make sure have output folder
             if not os.path.exists(out_folder):
                 os.makedirs(out_folder)
+                
             output_content = ''
             with open(out_folder + '/' + userID,'a') as output_file:
                 for tweet in tweets:
@@ -77,13 +87,15 @@ def main():
             global count_num
             count_num += len(tweets)
             
+            # Show how many tweets you have collected, also show the time (You can check the time to decide restart time)
             print('{}\tTotal {} tweets in {}/{}'.format(str(datetime.now())[:-7], str(count_num), out_folder, userID))
             
 
         tweetCriteria = got.manager.TweetCriteria().setUsername(username).setUntil(YOUR ENDING DATE)
         got.manager.TweetManager.getTweets(tweetCriteria, tweetsToFile, 100)
         print('\n\n')
-        timeout(count_num/80)
+        # Time out to prevend IP ban
+        timeout(count_num/60)
 
         
 
