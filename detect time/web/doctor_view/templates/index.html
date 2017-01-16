@@ -56,14 +56,22 @@
     
 
     <center>
-      <a class="btn btn-lg btn-primary" id="view-tweets" href="#" role="button">View Region Tweets &raquo;</a>
+<!--       <form action = "/result" method = "POST">
+         <input type = "hidden" name = "user" value ="{{ user }}" />
+         <input type = "submit" value = "Previous User" />
+      </form> -->
+    <div id="buttons">
+      <a class="btn btn-lg btn-primary" id="view-tweets" role="button">View Region Tweets</a>
+      <a class="btn btn-lg btn-default" href="/" role="button">Next User &raquo;</a>     
+    </div>
+
     </center>
     <br/>
     <center>
-      <a class="btn btn-lg btn-default" href="#" role="button">Previous User</a>
-      <a class="btn btn-lg btn-default" href="#" role="button">Next User</a>
+      <div class="wordcloud" id="wordcloud"></div>
     </center>
-    <br/>
+    <div class="container" id="tweets"></div>
+
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
@@ -88,5 +96,33 @@
          src = "{{ url_for('static', filename = 'js/range-picker.js') }}" ></script>
     <script type = "text/javascript" 
          src = "{{ url_for('static', filename = 'js/app.js') }}" ></script>
+    <script type="text/javascript">
+                  
+      $("#view-tweets").click(function(){
+        var date_query = new Array();
+        $(".select-label").each(function(){
+          date_query.push($(this).text());
+          console.log($(this).text());
+          });
+        $.ajax({
+          url: '/getTweets',
+          data: { user: "{{ user }}",
+                  start: date_query[1],
+                  end: date_query[0]
+                },
+          type: 'POST',
+          success: function(response) {
+              console.log('Retrieve tweets from ' + date_query[1] + ' to ' + date_query[0]);
+              response_array = response.split("!@!@!");
+              $(".wordcloud").html(response_array[0]);
+              $("#tweets").html(response_array[1]);
+              window.location.href='#view-tweets';
+          },
+          error: function(error) {
+              console.log(error);
+          }
+        });
+      });
+    </script>
   </body>
 </html>
