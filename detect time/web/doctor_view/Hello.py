@@ -1,5 +1,6 @@
 from flask import Flask, render_template, url_for
 from collections import defaultdict
+import random
 
 app = Flask(__name__)
 
@@ -36,7 +37,7 @@ def loadUserInfo():
                 statement = statement_dict[username]
             except:
                 statement = 'Unavailable'
-            user_dict[username] = ((illtime, start, end, statement))
+            user_dict[username] = ((illtime, start, end.strip(), statement))
 
     global user_info_dict
     user_info_dict = user_dict
@@ -61,7 +62,8 @@ print('User list has been built!')
 
 @app.route("/")
 def index():
-    return render_template("index.html", user = user_list[0], user_info_dict = user_info_dict[user_list[0]], user_tweets_dict = user_tweets_dict[user_list[0]])
+    index = random.randrange(0, len(user_list)-1)
+    return render_template("index.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], user_tweets_dict = user_tweets_dict[str(user_list[index])])
 
 @app.route("/initusr")
 def firstusr():
