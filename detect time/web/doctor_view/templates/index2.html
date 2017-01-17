@@ -19,7 +19,7 @@
   }
   path.line {
       fill: none;
-      stroke-width: 1px;
+      stroke-width: 1.5px;
   }
   .zoomOut {
       fill: #66a;
@@ -169,12 +169,39 @@
     svg.append("g")
       .attr("class", "y axis")
       .call(yAxis)
+     .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -60)
+      .attr("x", -200)
+      .attr("dy", "0.71em")
+      .attr("fill", "#000")
+      .text("Count");
 
     svg.append("clipPath")
       .attr("id", "clip")
       .append("rect")
       .attr("width", width)
       .attr("height", height);
+
+    //set the labels
+    svg.append("text")
+      .attr("transform", "translate(" + (width+3) + ")")
+      .attr("y",20)
+      .attr("x",-100)
+      .attr("dy", ".5em")
+      .attr("text-anchor", "start")
+      .style("fill", "orange")
+      .text("Late Tweets");
+
+    svg.append("text")
+      .attr("transform", "translate(" + (width+3) + ")")
+      .attr("x",-91)
+      .attr("dy", ".5em")
+      .attr("text-anchor", "start")
+      .style("fill", "steelblue")
+      .text("Frequence");
+
+
 
     for (idx in data_total) {
       svg.append("path")
