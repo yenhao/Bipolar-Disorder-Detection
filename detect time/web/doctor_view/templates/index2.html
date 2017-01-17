@@ -55,8 +55,15 @@
   <center>
     <div id="graph"></div>    
   </center>
+
+  <center>
+    <div class="wordcloud" id="wordcloud"></div>
+  </center>
+  <div class="container" id="tweets"></div>
   <!-- D3 js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="{{ url_for('static', filename = 'js/jquery.min.js') }}"></script>
   <script>
    
     // Parse the date / time
@@ -82,14 +89,24 @@
     data_total.push(data);
     data_total.push(data2);
 
-
+    var global_x1;
+    var global_x2;
 
     var colors = ["steelblue", "orange"];
-
-    var ydomain = 200;
+    var bandPos = [-1, -1];
+    var pos;
+    var ydomain;
     var xbegin = data[0].date;
     var xdomain = data[data.length -1].date;
 
+    var y1 = d3.max(data , function(d) { return d.total; });
+    var y2 = d3.max(data2 , function(d) { return d.total; });
+
+    if(y1>=y2){
+      ydomain = y1;
+    }else{
+      ydomain = y2;
+    }
 
     var margin = {
       top: 40,
@@ -97,32 +114,32 @@
       bottom: 50,
       left: 60
     }
-    var width = 760 - margin.left - margin.right;
+    var width = 1200 - margin.left - margin.right;
     var height = 450 - margin.top - margin.bottom;
     var zoomArea = {
-      x1: 0,
+      x1: xbegin,
       y1: 0,
       x2: xdomain,
       y2: ydomain
     };
     var drag = d3.behavior.drag();
 
-    var svg = d3.select("body").append("center").append("svg")
+    var svg = d3.select("#graph").append("svg")
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom)
       .append("g")
       .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
-    var x = d3.scale.linear()
-      .range([0, width]).domain([0, xdomain]);
+    var x = d3.time.scale()
+      .range([0, width]).domain(d3.extent(data, function(d) { return d.date; }));
 
     var y = d3.scale.linear()
       .range([height, 0]).domain([0, ydomain]);
 
     var xAxis = d3.svg.axis()
       .scale(x)
-      .orient("bottom");
+      .orient("bottom").ticks(15);
 
     var yAxis = d3.svg.axis()
       .scale(y)
@@ -131,10 +148,10 @@
     var line = d3.svg.line()
       .interpolate("basis")
       .x(function(d) {
-        return x(d[0]);
+        return x(d.date);
       })
       .y(function(d) {
-        return y(d[1]);
+        return y(d.total);
       });
 
     var band = svg.append("rect")
@@ -159,9 +176,9 @@
       .attr("width", width)
       .attr("height", height);
 
-    for (idx in data) {
+    for (idx in data_total) {
       svg.append("path")
-        .datum(data[idx])
+        .datum(data_total[idx])
         .attr("class", "line line" + idx)
         .attr("clip-path", "url(#clip)")
         .style("stroke", colors[idx])
@@ -229,6 +246,10 @@
         .attr("y", bandPos[1]);
 
       zoom();
+      // after get drag x1, x2, we are able to generate wordcloud 
+      // alert(global_x1);
+      // alert(global_x2);
+      viewTweets()
     });
 
     drag.on("drag", function() {
@@ -263,8 +284,13 @@
       //recalculate domains
       if (zoomArea.x1 > zoomArea.x2) {
         x.domain([zoomArea.x2, zoomArea.x1]);
+        // to set the global x1, x2 to get time area
+        global_x1 = zoomArea.x2;
+        global_x2 = zoomArea.x1;
       } else {
         x.domain([zoomArea.x1, zoomArea.x2]);
+        global_x1 = zoomArea.x1;
+        global_x2 = zoomArea.x2;
       }
 
       if (zoomArea.y1 > zoomArea.y2) {
@@ -282,14 +308,45 @@
     }
 
     var zoomOut = function() {
-      x.domain([0, xdomain]);
+      x.domain([xbegin, xdomain]);
       y.domain([0, ydomain]);
 
       var t = svg.transition().duration(750);
       t.select(".x.axis").call(xAxis);
       t.select(".y.axis").call(yAxis);
 
-      t.selectAll(".line").attr("d", line);     
+      t.selectAll(".line").attr("d", line);
+    };
+
+    function viewTweets(){
+      var Ymd = d3.time.format("%Y/%m/%d");
+      var date_query = new Array();
+      console.log(global_x1>global_x2);
+      console.log('Retrieve tweets from ' + Ymd(global_x1) + ' to ' + Ymd(global_x2));
+      $(".select-label").each(function(){
+        date_query.push($(this).text());
+        console.log($(this).text());
+        });
+      $.ajax({
+        url: '/getTweets',
+        data: { user: "{{ user }}",
+                start: Ymd(global_x1),
+                end: Ymd(global_x2)
+              },
+        type: 'POST',
+        success: function(response) {
+            
+            response_array = response.split("!@!@!");
+            $(".wordcloud").html(response_array[0]);
+            $("#tweets").html(response_array[1]);
+            window.location.href='#wordcloud';
+        },
+        error: function(error) {
+            console.log(error);
+        }
+      });
+    }
+
   </script>
   </body>
 </html>
