@@ -1,16 +1,19 @@
 from flask import Flask, render_template, url_for, request
 from collections import defaultdict
 import random
-from os import path
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import re
+import os
 
 app = Flask(__name__)
 
 # function to delete url
 def del_url(line):
-    return re.sub(r'https?:\/\/.*', "", line)
+    return re.sub(r'(\S*(\.com).*)|(https?:\/\/.*)', "", line)
+# replace hashtag
+def checktag(line): 
+    return re.sub(r'\@\S*', " <username> ", re.sub(r'\#\S*', " <hashtag> ", line))
 
 # Initial
 def loadTweets():
@@ -68,10 +71,33 @@ user_list = [user for user in user_info_dict]
 print('User list has been built!')
 
 
+def getTweetLFCount(user):
+    print('Get Tweet Freq Late Count! \n')
+    date_list = []
+    post_list = []
+    late_list = []
+    sorted_date_user = sorted(user_tweets_dict[user])
+    for date in sorted_date_user:
+        date_list.append(str(date)[:4]+'-'+str(date)[4:6]+'-'+str(date)[6:])
+        post_count = len(user_tweets_dict[user][date])
+        post_list.append(post_count)
+
+        late_count = 0
+        for tweet in user_tweets_dict[user][date]:
+            tweet_time = tweet[0]
+            if int(tweet_time.split(' ')[1].split(':')[1]) < 6:
+                late_count +=1
+        late_list.append(late_count)
+    return (zip(date_list, post_list), zip(date_list, late_list), date_list[0], date_list[1] ,len(date_list))
+
+
+
+
 @app.route("/")
 def index():
     index = random.randrange(0, len(user_list)-1)
-    return render_template("index.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], user_tweets_dict = user_tweets_dict[str(user_list[index])])
+    # return render_template("index.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], user_tweets_dict = user_tweets_dict[str(user_list[index])])
+    return render_template("index2.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), user_tweets_dict = user_tweets_dict[str(user_list[index])])
 
 @app.route("/pevious")
 def previous():
@@ -104,28 +130,27 @@ def returnTweets():
                         <p class="list-group-item-text">{}</p>
                     </a>
                     '''.format(tweet[1],tweet[0])
-                tweets_text += del_url(tweet[1]) + ' '
+                tweets_text += checktag(del_url(tweet[1])) + ' '
     html_content += '</div><center><a class="btn btn-lg btn-default" href="#head" role="button">Top</a></center><br/>'
 
 
-
-    # Generate a word cloud image
-    # wordcloud = WordCloud().generate(tweets_text)
-
-    # plt.imshow(wordcloud)
-    # plt.axis("off")
-
-    # lower max_font_size
-    wordcloud = WordCloud(max_font_size=40).generate(tweets_text)
-    plt.figure()
-    plt.imshow(wordcloud)
-    plt.axis("off")
-    # plt.show()
-    fig = plt.gcf()
-    # fig.set_size_inches(18.5, 14.5, forward=True)
     filename = user + '_' +start.replace('/','') + end.replace('/','') + '.png'
-    fig.savefig('static/img/wordcloud/' + filename, dpi=250)
-    plt.clf()
+    # if exist means duplicate
+    if os.path.exists('static/img/wordcloud/' + filename): 
+        print('Duplicate File! ' + filename)
+    else:
+        # Generate a word cloud image
+        # lower max_font_size
+        wordcloud = WordCloud(max_font_size=60, scale=2).generate(tweets_text)
+        plt.figure()
+        plt.imshow(wordcloud)
+        plt.axis("off")
+        # plt.show()
+        fig = plt.gcf()
+        # fig.set_size_inches(18.5, 14.5, forward=True)
+        
+        fig.savefig('static/img/wordcloud/' + filename, dpi=250)
+        plt.clf()
 
     img_html = "<img src=\"/static/img/wordcloud/"+filename+"\" >"
 
@@ -139,6 +164,7 @@ if __name__ == '__main__':
     if len(user_tweets_dict) == len(user_info_dict) : 
         print('SUCCESS : User Count Match!\n Service Start!')
         app.run(debug = True)
+        # app.run()
     else:
         print('FAIL : Count doesn\'t Match!\n Shut Down..')
 
