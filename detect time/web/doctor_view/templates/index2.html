@@ -44,30 +44,56 @@
   <div class="container" id="head">
     <div class="user-content">
       <h1><b>{{ user }}</b></h1>
+
       <div id="diagnose-statement">
+
         <blockquote class="blockquote">
           <p class="lead">{{ user_info_dict[3][1] }}</p>
-          <footer><cite title="Source Title">{{ user_info_dict[3][0] }}</cite></footer>
+          <footer><cite title="Source Title">{{ user_info_dict[3][0] }} (Diagnosis Statement)</cite></footer>
         </blockquote>
       </div>
     </div>
   </div>
+  <br/>
   <center>
+    <h3>Select the area in the figure below to see the wordcloud and corresponding tweets!</h3>
     <div id="graph"></div>    
   </center>
 
   <center>
+     <div id="buttons">
+      <a class="btn btn-lg btn-primary" id="view-tweets" onclick="viewTweets()" role="button">View Region Tweets</a>
+      <a class="btn btn-lg btn-default" href="/" role="button">Next User &raquo;</a>     
+    </div>   
+  </center>
+
+      
+  <center>
     <div class="wordcloud" id="wordcloud"></div>
   </center>
   <div class="container" id="tweets"></div>
+  <br/>
   <!-- D3 js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
   <script src="{{ url_for('static', filename = 'js/jquery.min.js') }}"></script>
   <script>
    
+
     // Parse the date / time
     var parseDate = d3.time.format("%Y-%m-%d").parse;
+
+    var diagnosed_date = "{{ user_info_dict[0] }}";
+
+    // console.log(diagnosed_date);
+
+    if(diagnosed_date.split("/").length == 3){
+      diagnosed_date = d3.time.format("%Y/%m/%d").parse(diagnosed_date);
+    }else if (diagnosed_date.split("/").length ==2){
+      diagnosed_date = d3.time.format("%Y/%m").parse(diagnosed_date);
+    }
+
+    console.log("Diagnosed at : " + diagnosed_date);
 
     var data_total = [];
 
@@ -89,8 +115,7 @@
     data_total.push(data);
     data_total.push(data2);
 
-    var global_x1;
-    var global_x2;
+
 
     var colors = ["steelblue", "orange"];
     var bandPos = [-1, -1];
@@ -98,6 +123,9 @@
     var ydomain;
     var xbegin = data[0].date;
     var xdomain = data[data.length -1].date;
+
+    var global_x1 = xbegin;
+    var global_x2 = xdomain;
 
     var y1 = d3.max(data , function(d) { return d.total; });
     var y2 = d3.max(data2 , function(d) { return d.total; });
@@ -276,7 +304,7 @@
       // after get drag x1, x2, we are able to generate wordcloud 
       // alert(global_x1);
       // alert(global_x2);
-      viewTweets()
+      // viewTweets();
     });
 
     drag.on("drag", function() {
