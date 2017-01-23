@@ -38,7 +38,23 @@
       stroke-width: 1px;
       stroke: red;
   }
- 
+
+  .navigator .data {
+      fill: lightgrey;
+      stroke-width: 0px;
+  }
+
+  .navigator .line {
+      fill: none;
+      stroke: darkgrey;
+      stroke-width: 1px;
+  }
+
+  .navigator .viewport {
+      stroke: grey;
+      fill: black;
+      fill-opacity: 0.2;
+  }
 </style>
 <body>
   <div class="container" id="head">
@@ -168,8 +184,8 @@
     var xAxis = d3.svg.axis()
       .scale(x)
       .orient("bottom")
-      .tickFormat(d3.time.format("%b %Y"))
-      .ticks(10);
+      // .tickFormat(d3.time.format("%b %Y"))
+      .ticks(12);
 
     var yAxis = d3.svg.axis()
       .scale(y)
@@ -323,6 +339,7 @@
 
       zoom();
       redrawDiagnosedline();
+      updateViewportFromChart();
     });
 
     drag.on("drag", function() {
@@ -373,11 +390,11 @@
         global_x2 = zoomArea.x2;
       }
 
-      if (zoomArea.y1 > zoomArea.y2) {
-        y.domain([zoomArea.y2, zoomArea.y1]);
-      } else {
-        y.domain([zoomArea.y1, zoomArea.y2]);
-      }
+      // if (zoomArea.y1 > zoomArea.y2) {
+      //   y.domain([zoomArea.y2, zoomArea.y1]);
+      // } else {
+      //   y.domain([zoomArea.y1, zoomArea.y2]);
+      // }
 
       //update axis and redraw lines
       var t = svg.transition().duration(750);
@@ -391,12 +408,13 @@
       x.domain([xbegin, xdomain]);
       y.domain([0, ydomain]);
 
-      var t = svg.transition().duration(750);
+      var t = svg.transition().duration(250);
       t.select(".x.axis").call(xAxis);
       t.select(".y.axis").call(yAxis);
 
       t.selectAll(".line").attr("d", line);
       redrawDiagnosedline();
+      updateViewportFromChart();
     };
 
     function viewTweets(){
@@ -428,6 +446,111 @@
       });
     }
 
+    // THE LOWER CHART
+
+    // setting up the drawing area
+    var navWidth = width,
+        navHeight = 150 - margin.top - margin.bottom;
+
+    var navChart = d3.select("#graph").append("svg")
+      .classed('navigator', true)
+      .attr("width", navWidth + margin.left + margin.right)
+      .attr("height", navHeight + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // define the X and Y scales
+    var navXScale = d3.time.scale()
+            .domain([xbegin, xdomain])
+            .range([0, navWidth]),
+        navYScale = d3.scale.linear()
+            .domain([0, ydomain])
+            .range([navHeight, 0]);
+
+    // For the navigation chart, we only want an X axis, so we define and add that now.
+    var navXAxis = d3.svg.axis()
+        .scale(navXScale)
+        .orient('bottom');
+
+    navChart.append('g')
+        .attr('class', 'x axis')
+        .attr('transform', 'translate(0,' + navHeight + ')')
+        .call(navXAxis);
+
+    // The only thing left to do is to add the data. We’re going to use a d3.svg.area component, 
+    // but we’re also going to add a d3.svg.line component so we can add a little visual punch.
+    var navData = d3.svg.area()
+        .x(function (d) { return navXScale(d.date); })
+        .y0(navHeight)
+        .y1(function (d) { return navYScale(d.total); });
+
+    var navLine = d3.svg.line()
+        .x(function (d) { return navXScale(d.date); })
+        .y(function (d) { return navYScale(d.total); });
+
+    navChart.append('path')
+        .attr('class', 'data')
+        .attr('d', navData(data));
+
+    navChart.append('path')
+        .attr('class', 'line')
+        .attr('d', navLine(data));
+
+    navChart.append('path')
+        .attr('class', 'data')
+        .attr('d', navData(data2));
+
+    navChart.append('path')
+        .attr('class', 'line')
+        .attr('d', navLine(data2));
+
+    // Diagnozed day
+    navChart.append("line")
+      .attr("class", "diagnosed-line")
+      .attr("x1", x(diagnosed_date))
+      .attr("x2", x(diagnosed_date))
+      .attr("y1", 0)
+      .attr("y2", navHeight)
+      .attr("stroke", "pink")
+      .attr("stroke-width", "5");
+
+    // THE VIEWPORT ON THE LOWER CHART
+
+    // For this chart, we’re going to use the brush event to update the xScale.domain and redraw the main chart.
+    var viewport = d3.svg.brush()
+        .x(navXScale)
+        .on("brush", function () {
+            x.domain(viewport.empty() ? navXScale.domain() : viewport.extent());
+            redrawChart();
+            redrawDiagnosedline();
+        });
+
+    // The method we’re calling there, redrawChart(), simply calls the data series and the X axis in order to redraw them following a change in the X scale. 
+    // I’ve separated it out into its own method because we’re going to need to call it from a few other places once we add panning and zooming.
+    function redrawChart() {
+      //update axis and redraw lines
+      var t = svg.transition().duration(750);
+      t.select(".x.axis").call(xAxis);
+
+      t.selectAll(".line").attr("d", line);
+    }
+    // Then we add the viewport component to the navigation chart.
+    navChart.append("g")
+      .attr("class", "viewport")
+      .call(viewport)
+      .selectAll("rect")
+      .attr("height", navHeight);
+
+
+    function updateViewportFromChart() {
+      if ((x.domain()[0] <= xbegin) && (x.domain()[1] >= xdomain)) {
+            viewport.clear();
+        }
+        else {
+            viewport.extent(x.domain());
+        }
+        navChart.select('.viewport').call(viewport);
+    }
   </script>
   </body>
 </html>
