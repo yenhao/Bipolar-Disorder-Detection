@@ -167,7 +167,9 @@
 
     var xAxis = d3.svg.axis()
       .scale(x)
-      .orient("bottom").ticks(15);
+      .orient("bottom")
+      .tickFormat(d3.time.format("%b %Y"))
+      .ticks(10);
 
     var yAxis = d3.svg.axis()
       .scale(y)
@@ -205,13 +207,32 @@
       .attr("fill", "#000")
       .text("Count");
 
+    // Diagnozed day
+    svg.append("line")
+      .attr("class", "diagnosed-line")
+      .attr("x1", x(diagnosed_date))
+      .attr("x2", x(diagnosed_date))
+      .attr("y1", 0)
+      .attr("y2", height)
+      .attr("stroke", "pink")
+      .attr("stroke-width", "5");
+
     svg.append("clipPath")
       .attr("id", "clip")
       .append("rect")
       .attr("width", width)
-      .attr("height", height);
+      .attr("height", height); 
 
     //set the labels
+    svg.append("text")
+      .attr("transform", "translate(" + (width+3) + ")")
+      .attr("y",40)
+      .attr("x",-120)
+      .attr("dy", ".5em")
+      .attr("text-anchor", "start")
+      .style("fill", "#ff89ba")
+      .text("Diagnosed-Day");
+
     svg.append("text")
       .attr("transform", "translate(" + (width+3) + ")")
       .attr("y",20)
@@ -301,10 +322,7 @@
         .attr("y", bandPos[1]);
 
       zoom();
-      // after get drag x1, x2, we are able to generate wordcloud 
-      // alert(global_x1);
-      // alert(global_x2);
-      // viewTweets();
+      redrawDiagnosedline();
     });
 
     drag.on("drag", function() {
@@ -335,6 +353,13 @@
         .attr("height", Math.abs(bandPos[1] - pos[1]));
     });
 
+    function redrawDiagnosedline(){
+      // To re draw the diagnosed line after zoom
+      svg.transition().duration(750).select(".diagnosed-line")
+        .attr("x1", x(diagnosed_date))
+        .attr("x2", x(diagnosed_date));
+    }
+
     function zoom() {
       //recalculate domains
       if (zoomArea.x1 > zoomArea.x2) {
@@ -359,7 +384,7 @@
       t.select(".x.axis").call(xAxis);
       t.select(".y.axis").call(yAxis);
 
-      t.selectAll(".line").attr("d", line); 
+      t.selectAll(".line").attr("d", line);
     }
 
     var zoomOut = function() {
@@ -371,6 +396,7 @@
       t.select(".y.axis").call(yAxis);
 
       t.selectAll(".line").attr("d", line);
+      redrawDiagnosedline();
     };
 
     function viewTweets(){
