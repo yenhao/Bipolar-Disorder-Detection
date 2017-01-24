@@ -1,5 +1,4 @@
-    // Parse the date / time
-    var parseDate = d3.time.format("%Y-%m-%d").parse;
+
 
     
 
@@ -18,8 +17,8 @@
     
     // var data = [{"date":"2012-03-20","total":3},{"date":"2012-03-21","total":8},{"date":"2012-03-22","total":2},{"date":"2012-03-23","total":10},{"date":"2012-03-24","total":3},{"date":"2012-03-25","total":20},{"date":"2012-03-26","total":12}];
     
-    console.log(data);
-    console.log(data2);
+    // console.log(data);
+    // console.log(data2);
 
     data_total.push(data);
     data_total.push(data2);
@@ -309,36 +308,6 @@
       redrawDiagnosedline();
       updateViewportFromChart();
     };
-
-    function viewTweets(){
-      var Ymd = d3.time.format("%Y/%m/%d");
-      var date_query = new Array();
-      console.log(global_x1>global_x2);
-      console.log('Retrieve tweets from ' + Ymd(global_x1) + ' to ' + Ymd(global_x2));
-      $(".select-label").each(function(){
-        date_query.push($(this).text());
-        console.log($(this).text());
-        });
-      $.ajax({
-        url: '/getTweets',
-        data: { user: "{{ user }}",
-                start: Ymd(global_x1),
-                end: Ymd(global_x2)
-              },
-        type: 'POST',
-        success: function(response) {
-            
-            response_array = response.split("!@!@!");
-            $(".wordcloud").html(response_array[0]);
-            $("#tweets").html(response_array[1]);
-            window.location.href='#wordcloud';
-        },
-        error: function(error) {
-            console.log(error);
-        }
-      });
-    }
-
     // THE LOWER CHART
 
     // setting up the drawing area

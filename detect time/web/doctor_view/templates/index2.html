@@ -12,49 +12,7 @@
   <link href="{{ url_for('static', filename = 'css/style.css') }}" rel="stylesheet">
 </head>
 <style>
-  .axis path, .axis line {
-      fill: none;
-      stroke: #000;
-      shape-rendering: crispEdges;
-  }
-  path.line {
-      fill: none;
-      stroke-width: 1.5px;
-  }
-  .zoomOut {
-      fill: #66a;
-      cursor: pointer;
-  }
-  .zoomOutText {
-      pointer-events: none;
-      fill : #ccc;
-  }
-  .zoomOverlay {
-      pointer-events: all;
-      fill:none;
-  }
-  .band {
-      fill : none;
-      stroke-width: 1px;
-      stroke: red;
-  }
 
-  .navigator .data {
-      fill: lightgrey;
-      stroke-width: 0px;
-  }
-
-  .navigator .line {
-      fill: none;
-      stroke: darkgrey;
-      stroke-width: 1px;
-  }
-
-  .navigator .viewport {
-      stroke: grey;
-      fill: black;
-      fill-opacity: 0.2;
-  }
 </style>
 <body>
   <div class="container" id="head">
@@ -85,24 +43,27 @@
 
       
   <center>
+    <div id="scatter"></div>
     <div class="wordcloud" id="wordcloud"></div>
   </center>
   <div class="container" id="tweets"></div>
   <br/>
   <!-- D3 js -->
   <script src="{{ url_for('static', filename = 'js/d3.min.js') }}"></script>
+  <!-- D3 tips -->
+  <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
   <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
   <script src="{{ url_for('static', filename = 'js/jquery.min.js') }}"></script>
-
+  <!-- For analysis chart -->
   <script type="text/javascript">
     // prepate the data
 
+    var twitter_user = "{{ user }}";
     var diagnosed_date = "{{ user_info_dict[0] }}";
-
 
     // Parse the date / time
     var parseDate = d3.time.format("%Y-%m-%d").parse;
-    
+
     var data = new Array();
     {%- for freq in LFlist[0]%}
     data.push({"date":parseDate("{{ freq[0] }}"),"total":{{ freq[1] }}});
@@ -114,8 +75,202 @@
     data2.push({"date":parseDate("{{ late[0] }}"),"total":{{ late[1] }}});
     {%- endfor %}
 
+    function viewTweets(){
+      var Ymd = d3.time.format("%Y/%m/%d");
+      var date_query = new Array();
+      // console.log(global_x1>global_x2);
+      console.log('Retrieve tweets from ' + Ymd(global_x1) + ' to ' + Ymd(global_x2));
+      $(".select-label").each(function(){
+        date_query.push($(this).text());
+        console.log($(this).text());
+        });
+      $.ajax({
+        url: '/getTweets',
+        data: { user: twitter_user,
+                start: Ymd(global_x1),
+                end: Ymd(global_x2)
+              },
+        type: 'POST',
+        success: function(response) {
+            
+            response_array = response.split("!@!@!");
+            $(".wordcloud").html(response_array[0]);
+            $("#tweets").html(response_array[1]);
+            window.location.href='#wordcloud';
+        },
+        error: function(error) {
+            console.log(error);
+        }
+      });
+    }
   </script>
-  <!-- For analysis chart chart -->
+  <!-- For scatter -->
+  <script type="text/javascript">
+
+    // prepare tweets data
+    var parseDatetime = d3.time.format("%Y-%m-%d %X").parse;
+    var tweets_array = new Array();
+    {%- for tweet in tweets_list%}
+    tweet_array = "{{tweet}}".split("|~|~|");
+    tweets_array.push({"date":parseDatetime(tweet_array[0]),"content":tweet_array[1]});
+    {%- endfor %}
+
+    var scatter_margin = { top: 50, right: 300, bottom: 50, left: 50 },
+    outerWidth = 1200,
+    outerHeight = 300,
+    scatter_width = outerWidth - scatter_margin.left - scatter_margin.right,
+    scatter_height = outerHeight - scatter_margin.top - scatter_margin.bottom;
+
+    var scatter_xbegin;
+    var scatter_xdomain;
+    var scatter_ydomain;
+
+
+    var scatter_xScale = d3.time.scale()
+      .range([0, scatter_width]).domain(d3.extent(data, function(d) { return d.date; }));
+
+    var scatter_yScale = d3.scale.linear()
+        .range([scatter_height, 0]).domain([0, scatter_ydomain]);
+
+    var scatter_xAxis = d3.svg.axis()
+        .scale(scatter_xScale)
+        .orient("bottom")
+        .tickSize(-scatter_height);
+
+    var scatter_yAxis = d3.svg.axis()
+        .scale(scatter_yScale)
+        .orient("left")
+        .tickSize(-scatter_width);    
+
+    var scatter_color = d3.scale.category10();
+
+    // label content
+    var scatter_tip = d3.tip()
+      .attr("class", "d3-tip")
+      .offset([-10, 0])
+      .html(function(d) {
+        return d.date + '<br/>' + d.content;
+      });
+
+    function scatter_transform(d) {
+      // return "translate(" + x(d[date]) + "," + y(d[content]) + ")";
+      return "translate(" + scatter_xScale(d.date) + "," + scatter_yScale(100) + ")";
+    }
+
+    function scatter_zoom() {
+      svg.select(".x.axis").call(scatter_xAxis);
+      svg.select(".y.axis").call(scatter_yAxis);
+
+      svg.selectAll(".dot")
+          .attr("transform", scatter_transform);
+    }
+
+    // var scatter_zoomBeh = d3.behavior.zoom()
+    //     .x(scatter_xScale)
+    //     .y(scatter_yScale)
+    //     .scaleExtent([0, 500])
+    //     .on("zoom", scatter_zoom);
+
+    // var scatter_svg = d3.select("#scatter")
+    //   .append("svg")
+    //     .attr("width", outerWidth)
+    //     .attr("height", outerHeight)
+    //   .append("g")
+    //     .attr("transform", "translate(" + scatter_margin.left + "," + scatter_margin.top + ")");
+    //     // .call(scatter_zoomBeh);
+
+    // scatter_svg.call(scatter_tip);
+
+    // scatter_svg.append("rect")
+    //     .attr("width", scatter_width)
+    //     .attr("height", scatter_height);
+    // // x y axis
+    // scatter_svg.append("g")
+    //     .classed("x axis", true)
+    //     .attr("transform", "translate(0," + scatter_height + ")")
+    //     .call(scatter_xAxis)
+    //   .append("text")
+    //     .classed("label", true)
+    //     .attr("x", scatter_width)
+    //     .attr("y", scatter_margin.bottom - 10)
+    //     .style("text-anchor", "end");
+
+    // scatter_svg.append("g")
+    //     .classed("y axis", true)
+    //     .call(scatter_yAxis)
+    //   .append("text")
+    //     .classed("label", true)
+    //     .attr("y", -scatter_margin.left)
+    //     .attr("dy", ".71em")
+    //     .style("text-anchor", "end");
+
+    // var objects = scatter_svg.append("svg")
+    //   .classed("objects", true)
+    //   .attr("width", scatter_width)
+    //   .attr("height", scatter_height);
+
+    // objects.append("svg:line")
+    //   .classed("axisLine hAxisLine", true)
+    //   .attr("x1", 0)
+    //   .attr("y1", 0)
+    //   .attr("x2", scatter_width)
+    //   .attr("y2", 0)
+    //   .attr("transform", "translate(0," + scatter_height + ")");
+
+    // objects.append("svg:line")
+    //   .classed("axisLine vAxisLine", true)
+    //   .attr("x1", 0)
+    //   .attr("y1", 0)
+    //   .attr("x2", 0)
+    //   .attr("y2", scatter_height);
+
+      // stuck in the transform!!!!!
+
+    // objects.selectAll(".dot")
+    //     .data(tweets_array)
+    //   .enter().append("circle")
+    //     .classed("dot", true)
+    //     .attr("r", 6)
+    //     .attr("transform", scatter_transform)
+    //     // .style("fill", function(d) { return color(d[colorCat]); })
+    //     .style("fill", "blue")
+    //     .on("mouseover", tip.show)
+    //     .on("mouseout", tip.hide);
+
+    // var legend = svg.selectAll(".legend")
+    //     .data(color.domain())
+    //   .enter().append("g")
+    //     .classed("legend", true)
+    //     .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+    // legend.append("circle")
+    //     .attr("r", 3.5)
+    //     .attr("cx", width + 20)
+    //     .attr("fill", color);
+
+    // legend.append("text")
+    //     .attr("x", width + 26)
+    //     .attr("dy", ".35em")
+    //     .text(function(d) { return d; });
+
+    // d3.select("input").on("click", change);
+
+    // function change() {
+    //   xCat = "Carbs";
+    //   xMax = d3.max(data, function(d) { return d[xCat]; });
+    //   xMin = d3.min(data, function(d) { return d[xCat]; });
+
+    //   zoomBeh.x(x.domain([xMin, xMax])).y(y.domain([yMin, yMax]));
+
+    //   var svg = d3.select("#scatter").transition();
+
+    //   svg.select(".x.axis").duration(750).call(xAxis).select(".label").text(xCat);
+
+    //   objects.selectAll(".dot").transition().duration(1000).attr("transform", transform);
+    // }      
+    // alert("ya");
+  </script>
+  <!-- For analysis chart -->
   <script src="{{ url_for('static', filename = 'js/main_chart.js') }}"></script>
   </body>
 </html>

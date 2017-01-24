@@ -13,7 +13,7 @@ def del_url(line):
     return re.sub(r'(\S*(\.com).*)|(https?:\/\/.*)', "", line)
 # replace hashtag
 def checktag(line): 
-    return re.sub(r'\@\S*', " <username> ", re.sub(r'\#\S*', " <hashtag> ", line))
+    return re.sub(r'\@\S*', " <username> ", line)
 
 # Initial
 def loadTweets():
@@ -96,8 +96,13 @@ def getTweetLFCount(user):
 @app.route("/")
 def index():
     index = random.randrange(0, len(user_list)-1)
+    tweets_list = []
+    for date in user_tweets_dict[str(user_list[index])]:
+        tweets = user_tweets_dict[str(user_list[index])][date]
+        for tweet in tweets:
+            tweets_list.append(tweet[0] + '|~|~|' + tweet[1].strip().decode('utf-8').replace('\\','\\\\'))
     # return render_template("index.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], user_tweets_dict = user_tweets_dict[str(user_list[index])])
-    return render_template("index2.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), user_tweets_dict = user_tweets_dict[str(user_list[index])])
+    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), tweets_list = tweets_list)
 
 @app.route("/pevious")
 def previous():
@@ -111,6 +116,7 @@ def returnTweets():
     start = request.form['start']
     end = request.form['end']
 
+    print('Query getTweets : User is ' + user + ', Start from ' + start + ', End at ' + end)
     #Generate user tweets html
     html_content = '''
         <div class="row">
@@ -162,11 +168,11 @@ def returnTweets():
 if __name__ == '__main__':
 
     if len(user_tweets_dict) == len(user_info_dict) : 
-        print('SUCCESS : User Count Match!\n Service Start!')
+        print('SUCCESS : User Count Match!\n Service Start!\n\n')
         app.run(debug = True)
         # app.run()
     else:
-        print('FAIL : Count doesn\'t Match!\n Shut Down..')
+        print('FAIL : Count doesn\'t Match!\n Shut Down..\n\n')
 
 
     
