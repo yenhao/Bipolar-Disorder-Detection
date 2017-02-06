@@ -195,8 +195,7 @@
       .attr("y", height + (margin.bottom - 5))
       .text("Zoom Out");
 
-    zoom();
-
+    
     drag.on("dragend", function() {
       var pos = d3.mouse(this);
       var x1 = x.invert(bandPos[0]);
@@ -262,13 +261,6 @@
         .attr("height", Math.abs(bandPos[1] - pos[1]));
     });
 
-    function redrawDiagnosedline(){
-      // To re draw the diagnosed line after zoom
-      svg.transition().duration(750).select(".diagnosed-line")
-        .attr("x1", x(diagnosed_date))
-        .attr("x2", x(diagnosed_date));
-    }
-
     function zoom() {
       //recalculate domains
       if (zoomArea.x1 > zoomArea.x2) {
@@ -291,9 +283,11 @@
       //update axis and redraw lines
       var t = svg.transition().duration(750);
       t.select(".x.axis").call(xAxis);
-      t.select(".y.axis").call(yAxis);
 
       t.selectAll(".line").attr("d", line);
+
+      // Update tweets chart
+      redrawScatter();
     }
 
     var zoomOut = function() {
@@ -385,6 +379,7 @@
             x.domain(viewport.empty() ? navXScale.domain() : viewport.extent());
             redrawChart();
             redrawDiagnosedline();
+            redrawScatter();
         });
 
     // The method we’re calling there, redrawChart(), simply calls the data series and the X axis in order to redraw them following a change in the X scale. 
@@ -412,4 +407,11 @@
             viewport.extent(x.domain());
         }
         navChart.select('.viewport').call(viewport);
+    }
+
+    function redrawDiagnosedline(){
+      // To re draw the diagnosed line after zoom
+      svg.transition().duration(750).select(".diagnosed-line")
+        .attr("x1", x(diagnosed_date))
+        .attr("x2", x(diagnosed_date));
     }

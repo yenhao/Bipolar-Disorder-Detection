@@ -12,7 +12,57 @@
   <link href="{{ url_for('static', filename = 'css/style.css') }}" rel="stylesheet">
 </head>
 <style>
+    #scatter rect {
+      fill: transparent;
+      shape-rendering: crispEdges;
+    }
 
+    #scatter .axis path,
+    #scatter .axis line {
+      fill: none;
+      stroke: rgba(0, 0, 0, 0.1);
+      shape-rendering: crispEdges;
+    }
+
+    #scatter .axisLine {
+      fill: none;
+      shape-rendering: crispEdges;
+      stroke: rgba(0, 0, 0, 0.5);
+      stroke-width: 2px;
+    }
+
+    #scatter .dot {
+      fill-opacity: .5;
+    }
+
+    .d3-tip {
+      line-height: 1;
+      font-weight: bold;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      border-radius: 2px;
+    }
+
+    /* Creates a small triangle extender for the tooltip */
+    .d3-tip:after {
+      box-sizing: border-box;
+      display: inline;
+      font-size: 10px;
+      width: 100%;
+      line-height: 1;
+      color: rgba(0, 0, 0, 0.8);
+      content: "\25BC";
+      position: absolute;
+      text-align: center;
+    }
+
+    /* Style northward tooltips differently */
+    .d3-tip.n:after {
+      margin: -1px 0 0 0;
+      top: 100%;
+      left: 0;
+    }
 </style>
 <body>
   <div class="container" id="head">
@@ -31,10 +81,12 @@
   <br/>
   <center>
     <h3>Select the area in the figure below to see the wordcloud and corresponding tweets!</h3>
-    <div id="graph"></div>    
+    <div id="graph"></div>   
+    <h3>Sentiment & Original Tweets</h3> 
   </center>
 
   <center>
+     <div id="scatter"></div>
      <div id="buttons">
       <a class="btn btn-lg btn-primary" id="view-tweets" onclick="viewTweets()" role="button">View Region Tweets</a>
       <a class="btn btn-lg btn-default" href="/" role="button">Next User &raquo;</a>     
@@ -43,7 +95,7 @@
 
       
   <center>
-    <div id="scatter"></div>
+    
     <div class="wordcloud" id="wordcloud"></div>
   </center>
   <div class="container" id="tweets"></div>
@@ -104,33 +156,36 @@
       });
     }
   </script>
+  <!-- For analysis chart -->
+  <script src="{{ url_for('static', filename = 'js/main_chart.js') }}"></script>
+  
   <!-- For scatter -->
   <script type="text/javascript">
-
+    console.log("Preparing Tweets Data");
     // prepare tweets data
     var parseDatetime = d3.time.format("%Y-%m-%d %X").parse;
     var tweets_array = new Array();
     {%- for tweet in tweets_list%}
     tweet_array = "{{tweet}}".split("|~|~|");
-    tweets_array.push({"date":parseDatetime(tweet_array[0]),"content":tweet_array[1]});
+    tweets_array.push({"date":parseDatetime(tweet_array[0]),"content":tweet_array[1], "sentiment":1});
     {%- endfor %}
 
-    var scatter_margin = { top: 50, right: 300, bottom: 50, left: 50 },
+    var scatter_margin = { top: 0, right: 50, bottom: 50, left: 50 },
     outerWidth = 1200,
     outerHeight = 300,
     scatter_width = outerWidth - scatter_margin.left - scatter_margin.right,
     scatter_height = outerHeight - scatter_margin.top - scatter_margin.bottom;
 
-    var scatter_xbegin;
-    var scatter_xdomain;
-    var scatter_ydomain;
+    var scatter_ydomain = 3;
 
 
     var scatter_xScale = d3.time.scale()
-      .range([0, scatter_width]).domain(d3.extent(data, function(d) { return d.date; }));
+            .domain([xbegin, xdomain])
+            .range([0, scatter_width]);
 
     var scatter_yScale = d3.scale.linear()
-        .range([scatter_height, 0]).domain([0, scatter_ydomain]);
+        .domain([0, scatter_ydomain])
+        .range([scatter_height, 0]);
 
     var scatter_xAxis = d3.svg.axis()
         .scale(scatter_xScale)
@@ -140,137 +195,139 @@
     var scatter_yAxis = d3.svg.axis()
         .scale(scatter_yScale)
         .orient("left")
+        .ticks(4)
         .tickSize(-scatter_width);    
 
-    var scatter_color = d3.scale.category10();
+    var scatter_color = function(val){
+      var colours = ['#9d3d38','#c5653a','#f9b743','#9bd6d7'];
+      if (val > 3) {
+        return colours[0];
+      } else if (val > 2) {
+        return colours[1];
+      } else if (val > 1) {
+        return colours[2];
+      } else {
+        return colours[3];
+      }
+    };
 
     // label content
     var scatter_tip = d3.tip()
       .attr("class", "d3-tip")
       .offset([-10, 0])
       .html(function(d) {
-        return d.date + '<br/>' + d.content;
+        return '<br/>' + d.content + '<br/><br/><br/>─ <I><small>' + d.date + '</small></I>';
       });
 
-    function scatter_transform(d) {
-      // return "translate(" + x(d[date]) + "," + y(d[content]) + ")";
-      return "translate(" + scatter_xScale(d.date) + "," + scatter_yScale(100) + ")";
-    }
+
+    var zoomBeh = d3.behavior.zoom()
+        .x(scatter_xScale)
+        // .y(scatter_yScale)
+        .scaleExtent([0, 500])
+        .on("zoom", function(){
+          scatter_zoom();
+
+        });
+
+    var scatter_svg = d3.select("#scatter")
+        .append("svg")
+          .attr("width", outerWidth)
+          .attr("height", outerHeight)
+        .append("g")
+          .attr("transform", "translate(" + scatter_margin.left + "," + scatter_margin.top + ")")
+          .call(zoomBeh);
+
+    scatter_svg.call(scatter_tip);
+
+    scatter_svg.append("rect")
+        .attr("width", scatter_width)
+        .attr("height", scatter_height);
+    // Draw x Axis
+    scatter_svg.append("g")
+        .classed("x axis", true)
+        .attr("transform", "translate(0," + scatter_height + ")")
+        .call(scatter_xAxis)
+      .append("text")
+        .classed("label", true)
+        .attr("x", scatter_width)
+        .attr("y", scatter_margin.bottom - 10)
+        .style("text-anchor", "end")
+        .text("Date");
+    // Draw y Axis
+    scatter_svg.append("g")
+        .classed("y axis", true)
+        .call(scatter_yAxis)
+      .append("text")
+        .classed("label", true)
+        .attr("transform", "rotate(-90)")
+        .attr("y", -scatter_margin.left)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Sentiment");
+
+    var scatter_objects = scatter_svg.append("svg")
+        .classed("objects", true)
+        .attr("width", scatter_width)
+        .attr("height", scatter_height);
+
+    scatter_objects.append("svg:line")
+          .classed("axisLine hAxisLine", true)
+          .attr("x1", 0)
+          .attr("y1", 0)
+          .attr("x2", scatter_width)
+          .attr("y2", 0)
+          .attr("transform", "translate(0," + height + ")");
+
+    scatter_objects.append("svg:line")
+          .classed("axisLine vAxisLine", true)
+          .attr("x1", 0)
+          .attr("y1", 0)
+          .attr("x2", 0)
+          .attr("y2", scatter_height);
+
+    scatter_objects.selectAll(".dot")
+          .data(tweets_array)
+        .enter().append("circle")
+          .classed("dot", true)
+          .attr("r", 8)
+          .attr("transform", scatter_transform)
+          .style("fill", function(d) { return scatter_color(d.sentiment); })
+          .on("mouseover", scatter_tip.show)
+          .on("mouseout", scatter_tip.hide);
+
+    zoom();
 
     function scatter_zoom() {
-      svg.select(".x.axis").call(scatter_xAxis);
-      svg.select(".y.axis").call(scatter_yAxis);
+      scatter_svg.select(".x.axis").call(scatter_xAxis);
 
-      svg.selectAll(".dot")
+      scatter_svg.selectAll(".dot")
           .attr("transform", scatter_transform);
+
+      // Update Main and Lower chart
+      x.domain([scatter_xScale.domain()[0], scatter_xScale.domain()[1]]);
+      redrawChart();
+      redrawDiagnosedline();
+      viewport.extent(x.domain());
+      navChart.select('.viewport').call(viewport);
     }
 
-    // var scatter_zoomBeh = d3.behavior.zoom()
-    //     .x(scatter_xScale)
-    //     .y(scatter_yScale)
-    //     .scaleExtent([0, 500])
-    //     .on("zoom", scatter_zoom);
+    function scatter_transform(d) {
+      return "translate(" + scatter_xScale(d.date) + "," + scatter_yScale(d.sentiment) + ")";
+    }
 
-    // var scatter_svg = d3.select("#scatter")
-    //   .append("svg")
-    //     .attr("width", outerWidth)
-    //     .attr("height", outerHeight)
-    //   .append("g")
-    //     .attr("transform", "translate(" + scatter_margin.left + "," + scatter_margin.top + ")");
-    //     // .call(scatter_zoomBeh);
+    function redrawScatter() {
 
-    // scatter_svg.call(scatter_tip);
+      scatter_xScale.domain([x.domain()[0], x.domain()[1]]);
 
-    // scatter_svg.append("rect")
-    //     .attr("width", scatter_width)
-    //     .attr("height", scatter_height);
-    // // x y axis
-    // scatter_svg.append("g")
-    //     .classed("x axis", true)
-    //     .attr("transform", "translate(0," + scatter_height + ")")
-    //     .call(scatter_xAxis)
-    //   .append("text")
-    //     .classed("label", true)
-    //     .attr("x", scatter_width)
-    //     .attr("y", scatter_margin.bottom - 10)
-    //     .style("text-anchor", "end");
+      var t = scatter_svg.transition().duration(750);
+      t.select("#scatter.x.axis").call(scatter_xAxis);
 
-    // scatter_svg.append("g")
-    //     .classed("y axis", true)
-    //     .call(scatter_yAxis)
-    //   .append("text")
-    //     .classed("label", true)
-    //     .attr("y", -scatter_margin.left)
-    //     .attr("dy", ".71em")
-    //     .style("text-anchor", "end");
+      t.selectAll("#scatter.dot")
+          .attr("transform", scatter_transform);
 
-    // var objects = scatter_svg.append("svg")
-    //   .classed("objects", true)
-    //   .attr("width", scatter_width)
-    //   .attr("height", scatter_height);
+    }
 
-    // objects.append("svg:line")
-    //   .classed("axisLine hAxisLine", true)
-    //   .attr("x1", 0)
-    //   .attr("y1", 0)
-    //   .attr("x2", scatter_width)
-    //   .attr("y2", 0)
-    //   .attr("transform", "translate(0," + scatter_height + ")");
-
-    // objects.append("svg:line")
-    //   .classed("axisLine vAxisLine", true)
-    //   .attr("x1", 0)
-    //   .attr("y1", 0)
-    //   .attr("x2", 0)
-    //   .attr("y2", scatter_height);
-
-      // stuck in the transform!!!!!
-
-    // objects.selectAll(".dot")
-    //     .data(tweets_array)
-    //   .enter().append("circle")
-    //     .classed("dot", true)
-    //     .attr("r", 6)
-    //     .attr("transform", scatter_transform)
-    //     // .style("fill", function(d) { return color(d[colorCat]); })
-    //     .style("fill", "blue")
-    //     .on("mouseover", tip.show)
-    //     .on("mouseout", tip.hide);
-
-    // var legend = svg.selectAll(".legend")
-    //     .data(color.domain())
-    //   .enter().append("g")
-    //     .classed("legend", true)
-    //     .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
-
-    // legend.append("circle")
-    //     .attr("r", 3.5)
-    //     .attr("cx", width + 20)
-    //     .attr("fill", color);
-
-    // legend.append("text")
-    //     .attr("x", width + 26)
-    //     .attr("dy", ".35em")
-    //     .text(function(d) { return d; });
-
-    // d3.select("input").on("click", change);
-
-    // function change() {
-    //   xCat = "Carbs";
-    //   xMax = d3.max(data, function(d) { return d[xCat]; });
-    //   xMin = d3.min(data, function(d) { return d[xCat]; });
-
-    //   zoomBeh.x(x.domain([xMin, xMax])).y(y.domain([yMin, yMax]));
-
-    //   var svg = d3.select("#scatter").transition();
-
-    //   svg.select(".x.axis").duration(750).call(xAxis).select(".label").text(xCat);
-
-    //   objects.selectAll(".dot").transition().duration(1000).attr("transform", transform);
-    // }      
-    // alert("ya");
+    tweets_array = null;
   </script>
-  <!-- For analysis chart -->
-  <script src="{{ url_for('static', filename = 'js/main_chart.js') }}"></script>
   </body>
 </html>
