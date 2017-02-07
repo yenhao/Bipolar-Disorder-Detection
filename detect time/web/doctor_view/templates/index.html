@@ -1,128 +1,339 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <title>Bipolar Status Viewer</title>
+<meta charset="utf-8">
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <title>Bipolar Status Viewer</title>
 
-    <!-- Bootstrap -->
-    <link href="{{ url_for('static', filename = 'dist/css/bootstrap.min.css') }}" rel="stylesheet">
+  <!-- Bootstrap -->
+  <link href="{{ url_for('static', filename = 'dist/css/bootstrap.min.css') }}" rel="stylesheet">
 
-    <link href="{{ url_for('static', filename = 'css/style.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename = 'css/style.css') }}" rel="stylesheet">
+</head>
+<style>
+    #scatter rect {
+      fill: transparent;
+      shape-rendering: crispEdges;
+    }
 
-    <link href="{{ url_for('static', filename = 'css/range-picker.css') }}" rel="stylesheet">
+    #scatter .axis path,
+    #scatter .axis line {
+      fill: none;
+      stroke: rgba(0, 0, 0, 0.1);
+      shape-rendering: crispEdges;
+    }
 
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
-  </head>
-  <body>
-  <!--
-    <center>
-      <form class="navbar-form" role="search">
-        <div class="form-group">
-          <input type="text" class="form-control" placeholder="Search Users">
-        </div>
-        <button type="submit" class="btn btn-default">Submit</button>
-      </form>
-    </center>
-    -->
-      <div class="container" id="head">
-        <div class="user-content">
-          <h1><b>{{ user }}</b></h1>
-          <div id="diagnose-statement">
-            <blockquote class="blockquote">
-                <p class="lead">{{ user_info_dict[3][1] }}</p>
-                <footer><cite title="Source Title">{{ user_info_dict[3][0] }}</cite></footer>
-            </blockquote>
-          </div>
-        </div>
+    #scatter .axisLine {
+      fill: none;
+      shape-rendering: crispEdges;
+      stroke: rgba(0, 0, 0, 0.5);
+      stroke-width: 2px;
+    }
+
+    #scatter .dot {
+      fill-opacity: .5;
+    }
+
+    .d3-tip {
+      line-height: 1;
+      font-weight: bold;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      border-radius: 2px;
+    }
+
+    /* Creates a small triangle extender for the tooltip */
+    .d3-tip:after {
+      box-sizing: border-box;
+      display: inline;
+      font-size: 10px;
+      width: 100%;
+      line-height: 1;
+      color: rgba(0, 0, 0, 0.8);
+      content: "\25BC";
+      position: absolute;
+      text-align: center;
+    }
+
+    /* Style northward tooltips differently */
+    .d3-tip.n:after {
+      margin: -1px 0 0 0;
+      top: 100%;
+      left: 0;
+    }
+</style>
+<body>
+  <div class="container" id="head">
+    <div class="user-content">
+      <h1><b>{{ user }}</b></h1>
+
+      <div id="diagnose-statement">
+
+        <blockquote class="blockquote">
+          <p class="lead">{{ user_info_dict[3][1] }}</p>
+          <footer><cite title="Source Title">{{ user_info_dict[3][0] }} (Diagnosis Statement)</cite></footer>
+        </blockquote>
       </div>
-    
-    <center>
-      <div class="analysis-img">
-      
-        <img src="{{ url_for('static', filename = 'img/late_freq_year/'+user+'.png')}}">  
-      
-      </div>
-    </center>
-
-    <div class="double_date_range"></div>
-    
-
-    <center>
-<!--       <form action = "/result" method = "POST">
-         <input type = "hidden" name = "user" value ="{{ user }}" />
-         <input type = "submit" value = "Previous User" />
-      </form> -->
-    <div id="buttons">
-       <a class="btn btn-lg btn-primary" id="view-tweets" role="button">View Region Tweets</a>
-      <a class="btn btn-lg btn-default" href="/" role="button">Next User &raquo;</a>     
     </div>
+  </div>
+  <br/>
+  <center>
+    <h3>Select the area in the figure below to see the wordcloud and corresponding tweets!</h3>
+    <p>Frequence means tweets count within 1 day, Late Tweets means user tweet from 0 a.m. ~ 6 a.m., Diagnosed-Day means the day that user been diagnosed with Bipolar Disorder</p>
+    <div id="graph"></div>   
+    <!-- <h3>Sentiment & Original Tweets</h3>  -->
+  </center>
 
-    </center>
-    <br/>
-    <center>
-      <div class="wordcloud" id="wordcloud"></div>
-    </center>
-    <div class="container" id="tweets"></div>
+  <center>
+     <div id="scatter"></div>
+     <div id="buttons">
+      <a class="btn btn-lg btn-default" href="/previous?user={{ index }}" role="button">Previous User</a>     
+      <a class="btn btn-lg btn-primary" id="view-tweets" onclick="viewTweets()" role="button">View Region Tweets</a>
+      <a class="btn btn-lg btn-default" href="/next?user={{ index }}" role="button">Next User &raquo;</a>     
+    </div>   
+  </center>
 
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript">
-      function format_date_string(txt){
-        return txt.slice(0,4) + '/' + txt.slice(4,6) + '/' + txt.slice(6);
-      }
-      start_date = format_date_string("{{user_info_dict[1]}}");
-      end_date = format_date_string("{{user_info_dict[2]}}");
-      var startDate = new Date(start_date),
-        endDate = new Date(end_date),
-        offset = endDate - startDate;
-    </script>
+      
+  <center>
+    
+    <div class="wordcloud" id="wordcloud"></div>
+  </center>
+  <div class="container" id="tweets"></div>
+  <br/>
+  <!-- D3 js -->
+  <script src="{{ url_for('static', filename = 'js/d3.min.js') }}"></script>
+  <!-- D3 tips -->
+  <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+  <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="{{ url_for('static', filename = 'js/jquery.min.js') }}"></script>
+  <!-- For analysis chart -->
+  <script type="text/javascript">
+    // prepate the data
 
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="{{ url_for('static', filename = 'js/jquery.min.js') }}"></script>
-    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script> -->
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script type = "text/javascript" 
-         src = "{{ url_for('static', filename = 'dist/js/bootstrap.min.js') }}" ></script>    
-    <script type = "text/javascript" 
-         src = "{{ url_for('static', filename = 'js/range-picker.js') }}" ></script>
-    <script type = "text/javascript" 
-         src = "{{ url_for('static', filename = 'js/app.js') }}" ></script>
-    <script type="text/javascript">
-                  
-      $("#view-tweets").click(function(){
-        var date_query = new Array();
-        $(".select-label").each(function(){
-          date_query.push($(this).text());
-          console.log($(this).text());
-          });
-        $.ajax({
-          url: '/getTweets',
-          data: { user: "{{ user }}",
-                  start: date_query[1],
-                  end: date_query[0]
-                },
-          type: 'POST',
-          success: function(response) {
-              console.log('Retrieve tweets from ' + date_query[1] + ' to ' + date_query[0]);
-              response_array = response.split("!@!@!");
-              $(".wordcloud").html(response_array[0]);
-              $("#tweets").html(response_array[1]);
-              window.location.href='#view-tweets';
-          },
-          error: function(error) {
-              console.log(error);
-          }
+    var twitter_user = "{{ user }}";
+    var diagnosed_date = "{{ user_info_dict[0] }}";
+
+    // Parse the date / time
+    var parseDate = d3.time.format("%Y-%m-%d").parse;
+
+    var data = new Array();
+    {%- for freq in LFlist[0]%}
+    data.push({"date":parseDate("{{ freq[0] }}"),"total":{{ freq[1] }}});
+    {%- endfor %}
+
+
+    var data2 = new Array();
+    {%- for late in LFlist[1]%}
+    data2.push({"date":parseDate("{{ late[0] }}"),"total":{{ late[1] }}});
+    {%- endfor %}
+
+    function viewTweets(){
+      var Ymd = d3.time.format("%Y/%m/%d");
+      var date_query = new Array();
+      // console.log(global_x1>global_x2);
+      console.log('Retrieve tweets from ' + Ymd(global_x1) + ' to ' + Ymd(global_x2));
+      $(".select-label").each(function(){
+        date_query.push($(this).text());
+        console.log($(this).text());
         });
+      $.ajax({
+        url: '/getTweets',
+        data: { user: twitter_user,
+                start: Ymd(global_x1),
+                end: Ymd(global_x2)
+              },
+        type: 'POST',
+        success: function(response) {
+            
+            response_array = response.split("!@!@!");
+            $(".wordcloud").html(response_array[0]);
+            $("#tweets").html(response_array[1]);
+            window.location.href='#wordcloud';
+        },
+        error: function(error) {
+            console.log(error);
+        }
       });
-    </script>
+    }
+  </script>
+  <!-- For analysis chart -->
+  <script src="{{ url_for('static', filename = 'js/main_chart.js') }}"></script>
+  
+  <!-- For scatter -->
+  <script type="text/javascript">
+    // console.log("Preparing Tweets Data");
+    // prepare tweets data
+    // var parseDatetime = d3.time.format("%Y-%m-%d %X").parse;
+    // var tweets_array = new Array();
+    // {%- for tweet in tweets_list%}
+    // tweet_array = "{{tweet}}".split("|~|~|");
+    // tweets_array.push({"date":parseDatetime(tweet_array[0]),"content":tweet_array[1], "sentiment":1});
+    // {%- endfor %}
+
+    // var scatter_margin = { top: 0, right: 50, bottom: 50, left: 50 },
+    // outerWidth = 1200,
+    // outerHeight = 300,
+    // scatter_width = outerWidth - scatter_margin.left - scatter_margin.right,
+    // scatter_height = outerHeight - scatter_margin.top - scatter_margin.bottom;
+
+    // var scatter_ydomain = 3;
+
+
+    // var scatter_xScale = d3.time.scale()
+    //         .domain([xbegin, xdomain])
+    //         .range([0, scatter_width]);
+
+    // var scatter_yScale = d3.scale.linear()
+    //     .domain([0, scatter_ydomain])
+    //     .range([scatter_height, 0]);
+
+    // var scatter_xAxis = d3.svg.axis()
+    //     .scale(scatter_xScale)
+    //     .orient("bottom")
+    //     .tickSize(-scatter_height);
+
+    // var scatter_yAxis = d3.svg.axis()
+    //     .scale(scatter_yScale)
+    //     .orient("left")
+    //     .ticks(4)
+    //     .tickSize(-scatter_width);    
+
+    // var scatter_color = function(val){
+    //   var colours = ['#9d3d38','#c5653a','#f9b743','#9bd6d7'];
+    //   if (val > 3) {
+    //     return colours[0];
+    //   } else if (val > 2) {
+    //     return colours[1];
+    //   } else if (val > 1) {
+    //     return colours[2];
+    //   } else {
+    //     return colours[3];
+    //   }
+    // };
+
+    // // label content
+    // var scatter_tip = d3.tip()
+    //   .attr("class", "d3-tip")
+    //   .offset([-10, 0])
+    //   .html(function(d) {
+    //     return '<br/>' + d.content + '<br/><br/><br/>─ <I><small>' + d.date + '</small></I>';
+    //   });
+
+
+    // var zoomBeh = d3.behavior.zoom()
+    //     .x(scatter_xScale)
+    //     // .y(scatter_yScale)
+    //     .scaleExtent([0, 500])
+    //     .on("zoom", function(){
+    //       scatter_zoom();
+
+    //     });
+
+    // var scatter_svg = d3.select("#scatter")
+    //     .append("svg")
+    //       .attr("width", outerWidth)
+    //       .attr("height", outerHeight)
+    //     .append("g")
+    //       .attr("transform", "translate(" + scatter_margin.left + "," + scatter_margin.top + ")")
+    //       .call(zoomBeh);
+
+    // scatter_svg.call(scatter_tip);
+
+    // scatter_svg.append("rect")
+    //     .attr("width", scatter_width)
+    //     .attr("height", scatter_height);
+    // // Draw x Axis
+    // scatter_svg.append("g")
+    //     .classed("x axis", true)
+    //     .attr("transform", "translate(0," + scatter_height + ")")
+    //     .call(scatter_xAxis)
+    //   .append("text")
+    //     .classed("label", true)
+    //     .attr("x", scatter_width)
+    //     .attr("y", scatter_margin.bottom - 10)
+    //     .style("text-anchor", "end")
+    //     .text("Date");
+    // // Draw y Axis
+    // scatter_svg.append("g")
+    //     .classed("y axis", true)
+    //     .call(scatter_yAxis)
+    //   .append("text")
+    //     .classed("label", true)
+    //     .attr("transform", "rotate(-90)")
+    //     .attr("y", -scatter_margin.left)
+    //     .attr("dy", ".71em")
+    //     .style("text-anchor", "end")
+    //     .text("Sentiment");
+
+    // var scatter_objects = scatter_svg.append("svg")
+    //     .classed("objects", true)
+    //     .attr("width", scatter_width)
+    //     .attr("height", scatter_height);
+
+    // scatter_objects.append("svg:line")
+    //       .classed("axisLine hAxisLine", true)
+    //       .attr("x1", 0)
+    //       .attr("y1", 0)
+    //       .attr("x2", scatter_width)
+    //       .attr("y2", 0)
+    //       .attr("transform", "translate(0," + height + ")");
+
+    // scatter_objects.append("svg:line")
+    //       .classed("axisLine vAxisLine", true)
+    //       .attr("x1", 0)
+    //       .attr("y1", 0)
+    //       .attr("x2", 0)
+    //       .attr("y2", scatter_height);
+
+    // scatter_objects.selectAll(".dot")
+    //       .data(tweets_array)
+    //     .enter().append("circle")
+    //       .classed("dot", true)
+    //       .attr("r", 8)
+    //       .attr("transform", scatter_transform)
+    //       .style("fill", function(d) { return scatter_color(d.sentiment); })
+    //       .on("mouseover", scatter_tip.show)
+    //       .on("mouseout", scatter_tip.hide);
+
+    // zoom();
+
+    // function scatter_zoom() {
+    //   scatter_svg.select(".x.axis").call(scatter_xAxis);
+
+    //   scatter_svg.selectAll(".dot")
+    //       .attr("transform", scatter_transform);
+
+    //   // Update Main and Lower chart
+    //   x.domain([scatter_xScale.domain()[0], scatter_xScale.domain()[1]]);
+    //   redrawChart();
+    //   redrawDiagnosedline();
+    //   viewport.extent(x.domain());
+    //   navChart.select('.viewport').call(viewport);
+    // }
+
+    // function scatter_transform(d) {
+    //   return "translate(" + scatter_xScale(d.date) + "," + scatter_yScale(d.sentiment) + ")";
+    // }
+
+    // function redrawScatter() {
+
+    //   scatter_xScale.domain([x.domain()[0], x.domain()[1]]);
+
+      
+
+    //   var t = scatter_svg.transition().duration(750);
+    //   t.select(".x.axis").call(scatter_xAxis);
+
+    //   t.selectAll(".dot")
+    //       .attr("transform", scatter_transform);
+
+    //   scatter_svg.select(".x.axis").call(scatter_xAxis);
+
+    // }
+
+    // tweets_array = null;
+  </script>
   </body>
 </html>

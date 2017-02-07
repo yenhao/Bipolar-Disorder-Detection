@@ -138,24 +138,9 @@
         date_query.push($(this).text());
         console.log($(this).text());
         });
-      $.ajax({
-        url: '/getTweets',
-        data: { user: twitter_user,
-                start: Ymd(global_x1),
-                end: Ymd(global_x2)
-              },
-        type: 'POST',
-        success: function(response) {
-            
-            response_array = response.split("!@!@!");
-            $(".wordcloud").html(response_array[0]);
-            $("#tweets").html(response_array[1]);
-            window.location.href='#wordcloud';
-        },
-        error: function(error) {
-            console.log(error);
-        }
-      });
+
+      window.location.href='/viewTweets?index={{ index }}&user={{ user }}&start=' + Ymd(global_x1) + '&end=' + Ymd(global_x2);
+
     }
   </script>
   <!-- For analysis chart -->
@@ -163,7 +148,7 @@
   
   <!-- For scatter -->
   <script type="text/javascript">
-    console.log("Preparing Tweets Data");
+    // console.log("Preparing Tweets Data");
     // prepare tweets data
     // var parseDatetime = d3.time.format("%Y-%m-%d %X").parse;
     // var tweets_array = new Array();

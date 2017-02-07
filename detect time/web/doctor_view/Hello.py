@@ -107,6 +107,13 @@ def index():
     # return render_template("index.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], user_tweets_dict = user_tweets_dict[str(user_list[index])])
     return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
 
+@app.route("/view", methods=['GET'])
+def view():
+    index = int(request.args.get('user'))
+    print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
+    print('Index : ' + str(index))
+    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
+
 @app.route("/previous", methods=['GET'])
 def previous():
     index = int(request.args.get('user')) -1
@@ -177,6 +184,67 @@ def returnTweets():
 
     return str(img_html) + '!@!@!' + str(html_content)
 
+@app.route("/viewTweets")
+def viewTweets():
+    index = int(request.args.get('index'))
+    user = request.args.get('user')
+    start = request.args.get('start')
+    end = request.args.get('end')
+
+    
+    print('Query getTweets : User : ' + user + ', Start from ' + start + ', End at ' + end)
+    print('Index : ' + str(index))
+
+    #Generate user tweets html
+    html_content = '''
+        <div class="row">
+            <h3>Tweets from {} to {} </h3>
+        </div>
+        <br/>
+        <div class="list-group" style="padding-bottom:150px">
+        '''.format(start, end)
+    tweets_text = ''
+    # Prepare tweets list
+    tweets_list = []
+    for date in user_tweets_dict[user]:
+        if date >= int(start.replace('/','')) and date <= int(end.replace('/','')):
+            tweets = user_tweets_dict[user][date]
+            for tweet in tweets:
+                html_content += '''
+                    <a class="list-group-item">
+                        <h4 class="list-group-item-heading">{}</h4>
+                        <p class="list-group-item-text">{}</p>
+                    </a>
+                    '''.format(tweet[1],tweet[0])
+                tweets_text += checktag(del_url(tweet[1])) + ' '
+                # Append tweets list
+                tweets_list.append(tweet[0] + '|~|~|' + tweet[1].strip().decode('utf-8').replace('\\','\\\\'))
+    html_content += '</div><center><a class="btn btn-lg btn-default" href="#head" role="button">Top</a></center><br/>'
+
+
+    filename = user + '_' +start.replace('/','') + end.replace('/','') + '.png'
+    # if exist means duplicate
+    if os.path.exists('static/img/wordcloud/' + filename): 
+        print('Duplicate File! ' + filename)
+    else:
+        # Generate a word cloud image
+        # lower max_font_size
+        wordcloud = WordCloud(max_font_size=60, scale=2).generate(tweets_text)
+        plt.figure()
+        plt.imshow(wordcloud)
+        plt.axis("off")
+        # plt.show()
+        fig = plt.gcf()
+        # fig.set_size_inches(18.5, 14.5, forward=True)
+        
+        fig.savefig('static/img/wordcloud/' + filename, dpi=250)
+        plt.clf()
+
+    img_url = "/static/img/wordcloud/"+filename
+
+    # Finish generate html content and wordcloud
+
+    return render_template("emotion_tweets.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], htmlTweets = str(html_content).decode('utf-8'), img_url = img_url, tweets_list = tweets_list, index=index)
 
 
 
