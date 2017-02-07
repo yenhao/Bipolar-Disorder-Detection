@@ -95,20 +95,35 @@ def getTweetLFCount(user):
 
 @app.route("/")
 def index():
-    index = random.randrange(0, len(user_list)-1)
-    tweets_list = []
-    for date in user_tweets_dict[str(user_list[index])]:
-        tweets = user_tweets_dict[str(user_list[index])][date]
-        for tweet in tweets:
-            tweets_list.append(tweet[0] + '|~|~|' + tweet[1].strip().decode('utf-8').replace('\\','\\\\'))
-    # return render_template("index.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], user_tweets_dict = user_tweets_dict[str(user_list[index])])
-    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), tweets_list = tweets_list)
+    index = 0
 
-@app.route("/pevious")
+    print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
+    print('Index : ' + str(index))
+    tweets_list = []
+    # for date in user_tweets_dict[str(user_list[index])]:
+    #     tweets = user_tweets_dict[str(user_list[index])][date]
+    #     for tweet in tweets:
+    #         tweets_list.append(tweet[0] + '|~|~|' + tweet[1].strip().decode('utf-8').replace('\\','\\\\'))
+    # return render_template("index.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], user_tweets_dict = user_tweets_dict[str(user_list[index])])
+    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
+
+@app.route("/previous", methods=['GET'])
 def previous():
-    user = request.form['user']
-    index = user_list.index(user)
-    return render_template("index.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], user_tweets_dict = user_tweets_dict[str(user_list[index])])
+    index = int(request.args.get('user')) -1
+    if index < 0 :
+        index = len(user_list)-1
+    print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
+    print('Index : ' + str(index))
+    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
+
+@app.route("/next", methods=['GET'])
+def next():
+    index = int(request.args.get('user')) +1
+    if index == len(user_list):
+        index = 0
+    print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
+    print('Index : ' + str(index))
+    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
 
 @app.route("/getTweets", methods=['POST'])
 def returnTweets():
@@ -116,7 +131,7 @@ def returnTweets():
     start = request.form['start']
     end = request.form['end']
 
-    print('Query getTweets : User is ' + user + ', Start from ' + start + ', End at ' + end)
+    print('Query getTweets : User : ' + user + ', Start from ' + start + ', End at ' + end)
     #Generate user tweets html
     html_content = '''
         <div class="row">
