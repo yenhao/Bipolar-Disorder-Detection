@@ -5,6 +5,7 @@ from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import re
 import os
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -70,6 +71,8 @@ print('User Count for user_info is %d' % len(user_info_dict))
 user_list = [user for user in user_info_dict]
 print('User list has been built!')
 
+def convertDatetime(orig_time):
+    return datetime.strptime(str(orig_time), "%Y%m%d")
 
 def getTweetLFCount(user):
     print('Get Tweet Freq Late Count! \n')
@@ -77,7 +80,23 @@ def getTweetLFCount(user):
     post_list = []
     late_list = []
     sorted_date_user = sorted(user_tweets_dict[user])
+    last_date = None
     for date in sorted_date_user:
+        # Check date change
+        if last_date != None:
+            date_diff = (convertDatetime(date) - convertDatetime(last_date)).days
+            # If day difference > 1day
+            # Append the gap, with date, frequence = 0, late = 0
+            if date_diff > 1:
+                for i in range(date_diff)[1:]:
+                    temp_date = convertDatetime(last_date) + timedelta(days=i)
+                    temp_date = temp_date.strftime("%Y%m%d")
+                    date_list.append(str(temp_date)[:4]+'-'+str(temp_date)[4:6]+'-'+str(temp_date)[6:])
+                    post_list.append(0)
+                    late_list.append(0)
+        
+        last_date = date
+
         date_list.append(str(date)[:4]+'-'+str(date)[4:6]+'-'+str(date)[6:])
         post_count = len(user_tweets_dict[user][date])
         post_list.append(post_count)
@@ -96,23 +115,17 @@ def getTweetLFCount(user):
 @app.route("/")
 def index():
     index = 0
-
     print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
     print('Index : ' + str(index))
     tweets_list = []
-    # for date in user_tweets_dict[str(user_list[index])]:
-    #     tweets = user_tweets_dict[str(user_list[index])][date]
-    #     for tweet in tweets:
-    #         tweets_list.append(tweet[0] + '|~|~|' + tweet[1].strip().decode('utf-8').replace('\\','\\\\'))
-    # return render_template("index.html", user = str(user_list[index]), user_info_dict = user_info_dict[str(user_list[index])], user_tweets_dict = user_tweets_dict[str(user_list[index])])
-    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
+    return render_template("index.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
 
 @app.route("/view", methods=['GET'])
 def view():
     index = int(request.args.get('user'))
     print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
     print('Index : ' + str(index))
-    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
+    return render_template("index.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
 
 @app.route("/previous", methods=['GET'])
 def previous():
@@ -121,7 +134,7 @@ def previous():
         index = len(user_list)-1
     print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
     print('Index : ' + str(index))
-    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
+    return render_template("index.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
 
 @app.route("/next", methods=['GET'])
 def next():
@@ -130,7 +143,7 @@ def next():
         index = 0
     print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
     print('Index : ' + str(index))
-    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
+    return render_template("index.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
 
 @app.route("/getTweets", methods=['POST'])
 def returnTweets():
