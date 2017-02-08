@@ -1,7 +1,19 @@
+# encoding: utf-8
 import urllib2
 import json
 from collections import defaultdict
 import time
+import re
+
+# function to delete url
+def del_url(line):
+    return re.sub(r'(\S*(\.com).*)|(https?:\/\/.*)', "", line)
+# replace tag
+def checktag(line): 
+    return re.sub(r'\@\S*', "", line)
+# Some special charactor
+def checkSpecial(line):
+    return line.replace('♡', 'love ').replace('\"','')
 
 if __name__ == '__main__': 
 # Sentiment 140 example
@@ -30,7 +42,7 @@ if __name__ == '__main__':
             for tweet_list in tweets_buffer:
                 query_string += '{"text": "' + tweet_list[3].strip() + '"},'
         else:
-            query_string += '{"text": "' + line_split[3].strip() + '"},'
+            query_string += '{"text": "' + checkSpecial(checktag(del_url(line_split[3].strip()))) + '"},'
 
         query_string = query_string[:-1] + ']}'
 
