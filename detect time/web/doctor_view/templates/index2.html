@@ -89,9 +89,9 @@
   <center>
      <div id="scatter"></div>
      <div id="buttons">
-      <a class="btn btn-lg btn-default" href="/previous?user={{ index }}" role="button">Previous User</a>     
+      <a class="btn btn-lg btn-default" href="/previous2?user={{ index }}" role="button">Previous User</a>     
       <a class="btn btn-lg btn-primary" id="view-tweets" onclick="viewTweets()" role="button">View Region Tweets</a>
-      <a class="btn btn-lg btn-default" href="/next?user={{ index }}" role="button">Next User &raquo;</a>     
+      <a class="btn btn-lg btn-default" href="/next2?user={{ index }}" role="button">Next User &raquo;</a>     
     </div>   
   </center>
 
@@ -143,6 +143,8 @@
 
     }
   </script>
+  <script src="http://cdn.jsdelivr.net/lodash/2.4.1/lodash.min.js"></script>
+  
   <!-- For analysis chart -->
   <script src="{{ url_for('static', filename = 'js/main_chart.js') }}"></script>
   

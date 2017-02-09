@@ -79,6 +79,7 @@
     </div>
   </div>
   <br/>
+  <br/>
   <center>
 <!--     <h3>Select the area in the figure below to see the wordcloud and corresponding tweets!</h3>
     <p>Frequence means tweets count within 1 day, Late Tweets means user tweet from 0 a.m. ~ 6 a.m., Diagnosed-Day means the day that user been diagnosed with Bipolar Disorder</p>
@@ -86,20 +87,23 @@
     <!-- <h3>Sentiment & Original Tweets</h3>  -->
   </center>
 
+  
+
   <center>
-     <div id="scatter"></div>
-     <div id="buttons">
-      <a class="btn btn-lg btn-default" href="/previous?user={{ index }}" role="button">Back</a>
-    </div>   
+    <div id="scatter"></div>
+    <div class="wordcloud" id="wordcloud" >
+      <img src="{{img_url}}">
+    </div>
   </center>
 
   <center>
-    
-    <div class="wordcloud" id="wordcloud">
-    <img src="{{img_url}}">
-    </div>
+     
+     <div id="buttons">
+      <a class="btn btn-lg btn-default" href="/previous2?user={{ index }}" role="button">Back</a>
+    </div>   
   </center>
-  <div class="container" id="tweets">{{ htmlTweets }}</div>
+
+  <div class="container" id="tweets"></div>
   <br/>
   <!-- D3 js -->
   <script src="{{ url_for('static', filename = 'js/d3.min.js') }}"></script>
@@ -109,7 +113,6 @@
   <script src="{{ url_for('static', filename = 'js/jquery.min.js') }}"></script>
   <!-- For analysis chart -->
   <!-- <script src="{{ url_for('static', filename = 'js/main_chart.js') }}"></script> -->
-  
   <!-- For scatter -->
   <script type="text/javascript">
     console.log("Preparing Tweets Data");
@@ -130,6 +133,9 @@
 
     var xbegin = tweets_array[0].date;
     var xdomain = tweets_array[tweets_array.length -1].date;
+
+    console.log(xbegin);
+    console.log(xdomain);
 
     var scatter_xScale = d3.time.scale()
             .domain([xbegin, xdomain])
