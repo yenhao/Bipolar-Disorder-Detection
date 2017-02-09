@@ -115,7 +115,7 @@ def getTweetLFCount(user):
 
 @app.route("/")
 def index():
-    index = 0
+    index = 1
     print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
     print('Index : ' + str(index))
     tweets_list = []
@@ -147,7 +147,11 @@ def next():
     return render_template("index.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
 @app.route("/index")
 def index2():
-    index = 1
+    index = request.args.get('user')
+    if index:
+        index = int(index)
+    else:
+        index = 1
     print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
     print('Index : ' + str(index))
     tweets_list = []
@@ -195,7 +199,8 @@ def returnTweets():
         <div class="list-group" style="padding-bottom:150px">
         '''.format(start, end)
     tweets_text = ''
-    for date in user_tweets_dict[user]:
+    sorted_date_user = sorted(user_tweets_dict[user])
+    for date in sorted_date_user:
         if date >= int(start.replace('/','')) and date <= int(end.replace('/','')):
             tweets = user_tweets_dict[user][date]
             for tweet in tweets:
@@ -252,8 +257,9 @@ def viewTweets():
         '''.format(start, end)
     tweets_text = ''
     # Prepare tweets list
+    sorted_date_user = sorted(user_tweets_dict[user])
     tweets_list = []
-    for date in user_tweets_dict[user]:
+    for date in sorted_date_user:
         if date >= int(start.replace('/','')) and date <= int(end.replace('/','')):
             tweets = user_tweets_dict[user][date]
             for tweet in tweets:
