@@ -1,8 +1,5 @@
-
 # coding: utf-8
-
 # python2
-
 from EmotionDetection import EmotionDetection
 from collections import defaultdict
 import plotly.plotly as py
@@ -11,9 +8,17 @@ import os
 import pytz
 from datetime import datetime
 
+# function to delete url
+def del_url(line):
+    return re.sub(r'(\S*(\.com).*)|(https?:\/\/.*)', "", line)
+# replace tag
+def checktag(line): 
+    return re.sub(r'\@\S*', "", line)
+# Some special character
+def checkSpecial(line):
+    return line.replace('♡', 'love ').replace('\"','').replace('“','')
 
 # ## Read Patients
-
 def readPatient(folder, filename):
     with open(folder + filename, 'r') as openfile:
         return [line.strip().split('\t') for line in openfile.readlines()]
@@ -32,21 +37,21 @@ def readPatientTimezone(folder, filename):
         for line in openfile.readlines():
             split = line.strip().split('\t')
             if split[2] != None:
-                time_dict[split[1][1:]] = split[2]
+                time_dict[split[1]] = split[2]
             else:
                 continue
     return time_dict
 
 
 print('\n Reading patient tweets..')
-folder = '../twitter crawler/patient_tweets_nourl/'
+folder = '../twitter crawler/patient_tweets/'
 print(folder)
 patient_list = checkFolderFile(folder)
 patient_tweets_dict = defaultdict(lambda : [])
 for patient_name in patient_list:
     patient_tweets_dict[patient_name] = readPatient(folder, patient_name)
     
-
+print(' Patient Number from tweets folder:' + str(len(patient_tweets_dict)))
 
 # ## Get patient timezone
 print('\n Getting patient timezone..')
@@ -109,7 +114,7 @@ for patient in patient_ill_time_dict:
         patient_month_time_dict[patient] = patient_ill_time_dict[patient]
     else:
         continue
-
+print( 'Patient Counts from ill time:' + str(len(patient_ill_time_dict)))
 # # Analyse the post frequence
 # ## By Day
 print('\n Creating daily dictionary..')
@@ -130,12 +135,10 @@ for patient in patient_tweets_dict:
         except:
             patient_day_tweets[patient][date].append(local_time + '\t<empty_tweets>')
     
+print(' Patients Count from day tweets:' + str(len(patient_day_tweets)))
 
 print('\n Release patient tweets dictionary') 
 patient_tweets_dict = None
-
-# ## Chart
-import numpy as np
 
 ed = EmotionDetection()
 
@@ -143,14 +146,25 @@ folder = 'patient emotion/'
 
 print('\n Start to go through patients')
 
-# ## Late + Frequence
-for patient in patient_day_tweets:
+# ## Go through patients to query tweets emotion
+# for patient in patient_day_tweets:
+for patient in patient_ill_time_dict:
     print('\t'+patient)
-    outfile = open(folder + patient,'w')
+    
 
-    lx_axis = []
-    ly_axis = []
-    y = []
+    # if in the day tweets
+    if patient not in patient_day_tweets:
+        print('{} is not in day tweets!'.format(patient))
+        continue
+
+    # Check if file dulpicate
+    # if exist means duplicate
+    if os.path.exists(folder + patient): 
+        print('Duplicate user! ' + patient)
+        continue
+    else:
+        outfile = open(folder + patient,'w')
+
     try:
         ill_time = patient_month_time_dict[patient]
     except:
@@ -159,7 +173,6 @@ for patient in patient_day_tweets:
 
     # Calculate illness start and end
     ill_time_list = ill_time.split('/')
-    
     lyear = int(ill_time_list[0])
     lmonth = int(ill_time_list[1])
     try:
@@ -173,7 +186,7 @@ for patient in patient_day_tweets:
         end = datetime(lyear+1,end_month-12,lday)
     else:
         end = datetime(lyear,end_month,lday)
-    # Enc calculation
+    # End calculation
 
     print('\n Start to query emotion!')
     sorted_date_patient = sorted(patient_day_tweets[patient])
@@ -188,7 +201,7 @@ for patient in patient_day_tweets:
             print(len(tweets_list))
             for tweet in tweets_list:
                 try:
-                    tweet = tweet.split('\t')[1]
+                    tweet = del_url(tweet.split('\t')[1])
                     emotion_json = ed.get_emotion_json(tweet)
                     # patient<\t>date<\t>tweet<\t>emotion1<\t>emotion2<\t>ambiguous
                     out_format = '{}\t{}\t{}\t{}\t{}\t{}\n'.format(patient, date, tweet, emotion_json[u'groups'][0][u'name'], emotion_json[u'groups'][1][u'name'], emotion_json[u'ambiguous'])
@@ -198,4 +211,3 @@ for patient in patient_day_tweets:
                     continue
 
     outfile.close()
-
