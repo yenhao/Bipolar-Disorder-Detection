@@ -21,10 +21,10 @@ def loadTweets():
     print('Loading Daily Tweets..')
     # {username:{int(date):{[(datetime,content),...]}}}
     tweets_dict = defaultdict(lambda: defaultdict(lambda:[]))
-    with open('../../organized/date_tweets') as tweets:
+    with open('../../organized/date_sentiment_tweets') as tweets:
         for line in tweets.readlines():
-            username, date, datetime, content = line.split('\t')
-            tweets_dict[username][int(date)].append((datetime, content))
+            username, date, datetime, content, sentiment = line.split('\t')
+            tweets_dict[username][int(date)].append((datetime, content, sentiment))
 
     global user_tweets_dict
     user_tweets_dict = tweets_dict
@@ -271,7 +271,7 @@ def viewTweets():
                     '''.format(tweet[1],tweet[0])
                 tweets_text += checktag(del_url(tweet[1])) + ' '
                 # Append tweets list
-                tweets_list.append(tweet[0] + '|~|~|' + tweet[1].strip().decode('utf-8').replace('\\','\\\\'))
+                tweets_list.append(tweet[0] + '|~|~|' + tweet[1].decode('utf-8').replace('\\','\\\\') + '|~|~|' + tweet[2].strip())
     html_content += '</div><center><a class="btn btn-lg btn-default" href="#head" role="button">Top</a></center><br/>'
 
 

@@ -120,7 +120,7 @@
     var tweets_array = new Array();
     {%- for tweet in tweets_list%}
     tweet_array = "{{tweet}}".split("|~|~|");
-    tweets_array.push({"date":parseDatetime(tweet_array[0]),"content":tweet_array[1], "sentiment":1});
+    tweets_array.push({"date":parseDatetime(tweet_array[0]),"content":tweet_array[1], "sentiment":tweet_array[2]});
     {%- endfor %}
 
     var scatter_margin = { top: 0, right: 50, bottom: 50, left: 50 },
@@ -142,7 +142,7 @@
             .range([0, scatter_width]);
 
     var scatter_yScale = d3.scale.linear()
-        .domain([0, scatter_ydomain])
+        .domain([-2, scatter_ydomain-1])
         .range([scatter_height, 0]);
 
     var scatter_xAxis = d3.svg.axis()
@@ -153,16 +153,16 @@
     var scatter_yAxis = d3.svg.axis()
         .scale(scatter_yScale)
         .orient("left")
-        .ticks(4)
+        .ticks(5)
         .tickSize(-scatter_width);    
 
     var scatter_color = function(val){
-      var colours = ['#9d3d38','#c5653a','#f9b743','#9bd6d7'];
-      if (val > 3) {
+      var colours = ['#38d199','#efc640','#ff7c7c','#9bd6d7'];
+      if (val > 0) {
         return colours[0];
-      } else if (val > 2) {
+      } else if (val > -1) {
         return colours[1];
-      } else if (val > 1) {
+      } else if (val > -2) {
         return colours[2];
       } else {
         return colours[3];
