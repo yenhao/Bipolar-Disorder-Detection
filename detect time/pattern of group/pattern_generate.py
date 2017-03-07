@@ -17,7 +17,7 @@ def checkhashtag(line):
 
 # Some special character
 def checkSpecial(line):
-    return line.replace('♡', 'love ').replace('\"','').replace('“','').replace('”','').replace('…','...')
+    return line.replace('♡', 'love ').replace('\"','').replace('“','').replace('”','').replace('…','...').replace('—','-')
 
 def checkline(line):
     return del_url(checkhashtag(checktag(checkSpecial(line))))
@@ -27,7 +27,7 @@ def checkFolderFile(folder):
 
 def loadTweets(folder, filename):
     with open(folder + filename, 'r') as openfile:
-        return [checkline(line.strip().split('\t')[-1]) for line in openfile.readlines()]
+        return [checkline(line.strip().split('\t')[3]) for line in openfile.readlines()]
 
 def combineWordToken(token_list):
     combine_list = ["n't","'m","'s"]
@@ -60,8 +60,10 @@ def matchPattern(pattern, user_tweet_list = []):
     pattern_token[pattern_token.index('<\.>')] = '(?!\#|\@)\S+'
     word_counts = 0
     for tweets in user_tweet_list:
-        tweets = ' '.join(combineWordToken(nltk.word_tokenize(checkline(tweets).lower().decode('utf-8'))))
-        words = re.findall(' '.join(pattern_token) ,tweets)
+        try:
+            words = re.findall(' '.join(pattern_token) ,tweets)
+        except:
+            words = []
         word_counts += len(words)
     return word_counts
 
@@ -70,26 +72,38 @@ if __name__ == '__main__':
     pool = mp.Pool(processes=mp.cpu_count()-1)
     
 
-    folder = '../../twitter crawler/patient_tweets/'
-    out_name = 'Bipolar Pattern'
+    # folder = '../../twitter crawler/patient_tweets/'
+    folder = '../patient emo_senti/'
+    out_name = 'Bipolar Pattern Year'
     print("Load User Tweets")
     print(folder)
     all_text_list = [loadTweets( folder, user) for user in checkFolderFile(folder)]
 
     # print len(all_text_list) # file counts
-
+    dead_word_file = open('Dead_word','w')
     # dict{ pattern : count}
     pattern_dict = defaultdict(lambda : None)
-
+    print('Tokenize every tweets')
     for i, user_tweet_list in enumerate(all_text_list):
-        for line in user_tweet_list:
+        for j, line in enumerate(user_tweet_list):
             # token_list = whitespaceTokenizer(line)
             # token_list = re.findall(r'[.?]|\w+', line.lower())
-            token_list = combineWordToken(nltk.word_tokenize(line.lower().decode('utf-8')))
+            try:
+                token_list = combineWordToken(nltk.word_tokenize(line.lower()))
+            except:
+                dead_word_file.write(line)
+                token_list = []
+            # Go through new pattern
+            all_text_list[i][j] = ' '.join(token_list)
+
+    dead_word_file.close()    
+    print('Go through Pattern')
+    for i, user_tweet_list in enumerate(all_text_list):
+        for line in user_tweet_list:
+            token_list = line.split(' ')
             # Go through new pattern
             for pattern in slideWindows(token_list):
                 if pattern not in pattern_dict:
-                    # print pattern
                     # print [matchPattern(pattern, user_tweet_list) for user_tweet_list in all_text_list]
                     multi_res =[pool.apply_async(matchPattern, (pattern, user_tweet_list,)) for user_tweet_list in all_text_list]
                     pattern_sum = sum([res.get() for res in multi_res])
