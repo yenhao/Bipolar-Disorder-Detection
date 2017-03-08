@@ -3,7 +3,7 @@ import os
 import re
 import multiprocessing as mp
 from collections import defaultdict
-import nltk
+from nltk.tokenize import TweetTokenizer
 import operator
 # function to delete url
 def del_url(line):
@@ -77,26 +77,26 @@ if __name__ == '__main__':
     out_name = 'Bipolar Pattern Year'
     print("Load User Tweets")
     print(folder)
-    all_text_list = [loadTweets( folder, user) for user in checkFolderFile(folder)]
+    all_text_list = [loadTweets( folder, user) for user in checkFolderFile(folder)[:1]]
 
     # print len(all_text_list) # file counts
     dead_word_file = open('Dead_word','w')
-    # dict{ pattern : count}
-    pattern_dict = defaultdict(lambda : None)
+
     print('Tokenize every tweets')
+    tknzr = TweetTokenizer()
     for i, user_tweet_list in enumerate(all_text_list):
         for j, line in enumerate(user_tweet_list):
-            # token_list = whitespaceTokenizer(line)
-            # token_list = re.findall(r'[.?]|\w+', line.lower())
             try:
-                token_list = combineWordToken(nltk.word_tokenize(line.lower()))
+                token_list = tknzr.tokenize(line.lower())
             except:
                 dead_word_file.write(line)
                 token_list = []
-            # Go through new pattern
             all_text_list[i][j] = ' '.join(token_list)
 
-    dead_word_file.close()    
+    dead_word_file.close()
+
+    # dict{ pattern : count}
+    pattern_dict = defaultdict(lambda : None)
     print('Go through Pattern')
     for i, user_tweet_list in enumerate(all_text_list):
         for line in user_tweet_list:
@@ -107,13 +107,13 @@ if __name__ == '__main__':
                     # print [matchPattern(pattern, user_tweet_list) for user_tweet_list in all_text_list]
                     multi_res =[pool.apply_async(matchPattern, (pattern, user_tweet_list,)) for user_tweet_list in all_text_list]
                     pattern_sum = sum([res.get() for res in multi_res])
-                    print('\n{}\t{}\t{}'.format(i, pattern, pattern_sum))
+                    print('\n{}\t{}\t{}'.format(i, pattern.encode('utf-8'), pattern_sum))
                     pattern_dict[pattern] = pattern_sum
 
     # Output to file
     sorted_pattern_dict = sorted(pattern_dict.items(), key=operator.itemgetter(1), reverse=True)
     with open(out_name,'w') as outfile:
         for pattern, count in sorted_pattern_dict:
-            outfile.write('{}\t{}\n'.format(pattern, count))
+            outfile.write('{}\t{}\n'.format(pattern.encode('utf-8'), count))
 
 
