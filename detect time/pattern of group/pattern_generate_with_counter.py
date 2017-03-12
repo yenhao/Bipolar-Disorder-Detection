@@ -21,7 +21,7 @@ def checkSpecial(line):
     return line.replace('♡', 'love ').replace('\"','').replace('“','').replace('”','').replace('…','...').replace('—','-').replace('’','\'')
 
 def checkline(line):
-    return del_url(checkhashtag(checkSpecial(line)))
+    return del_url(checktag(checkSpecial(line)))
 
 def checkFolderFile(folder):
     return os.listdir(folder)
@@ -43,13 +43,13 @@ def combineWordToken(token_list):
 
 def slideWindows(token_list, size = 3):
     if len(token_list) >= size:
-        return getPatternCombination(token_list[:3]) + slideWindows(token_list[1:], size)
+        return getPatternCombination(token_list[:size], size) + slideWindows(token_list[1:], size)
     else:
         return []
 
-def getPatternCombination(pattern_word_list):
+def getPatternCombination(pattern_word_list, size):
     pattern_list = []
-    for i in range(3):
+    for i in range(size):
         temp_pattern_word_list = list(pattern_word_list)
         temp_pattern_word_list[i] = '<.>'
         pattern_list.append(' '.join(temp_pattern_word_list))
@@ -69,7 +69,7 @@ def matchPattern(pattern, user_tweet_list):
     return word_counts
 
 def getPattern(user_tweet_list):
-    return [pattern for token_list in user_tweet_list for pattern in slideWindows(token_list)]
+    return [pattern for token_list in user_tweet_list for pattern in slideWindows(token_list, size = 2)]
 
 if __name__ == '__main__':
     # Using all cpu core -1
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     
 
     folder = '../patient emo_senti/'
-    out_name = 'bipolar pattern hashtag'
+    out_name = 'bipolar pattern hashtag_2gram'
     print("Load User Tweets")
     print(folder)
     all_text_list = [loadTweets( folder, user) for user in checkFolderFile(folder)]
@@ -94,7 +94,6 @@ if __name__ == '__main__':
             except:
                 dead_word_file.write(line)
                 token_list = []
-            # all_text_list[i][j] = ' '.join(token_list)
             all_text_list[i][j] = token_list
 
     dead_word_file.close()
@@ -109,16 +108,6 @@ if __name__ == '__main__':
     print('Get every Patterns\nPut it in Counter')
 
     pattern_counter = Counter([pattern for res in multi_res for pattern in res.get()])
-
-    # for i, user_tweet_list in enumerate(all_text_list):
-    #     for line in user_tweet_list:
-    #         # Go through new pattern
-    #         for pattern in slideWindows(line.split(' ')):
-    #             if pattern not in pattern_dict:
-    #                 multi_res =[pool.apply_async(matchPattern, (pattern, user_tweet_list,)) for user_tweet_list in all_text_list[i:]]
-    #                 pattern_sum = sum([res.get() for res in multi_res])
-    #                 print('\n{}\t{}\t{}'.format(i, pattern.encode('utf-8'), pattern_sum))
-    #                 pattern_dict[pattern] = pattern_sum
 
     print('Output to file')
     # Output to file
