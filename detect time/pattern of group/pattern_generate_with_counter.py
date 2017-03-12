@@ -26,9 +26,9 @@ def checkline(line):
 def checkFolderFile(folder):
     return os.listdir(folder)
 
-def loadTweets(folder, filename):
+def loadTweets(folder, filename, text_loc = -1):
     with open(folder + filename, 'r') as openfile:
-        return [checkline(line.strip().split('\t')[3]) for line in openfile.readlines()]
+        return [checkline(line.strip().split('\t')[text_loc]) for line in openfile.readlines()]
 
 def combineWordToken(token_list):
     combine_list = ["n't","'m","'s"]
@@ -37,9 +37,6 @@ def combineWordToken(token_list):
         if token_list[i+1] in combine_list:
             token_list[i:i+2] = [''.join(token_list[i:i+2])]
     return token_list
-
-# def whitespaceTokenizer(line):
-#     return [token.lower() for token in line.split(' ') if token != '']
 
 def slideWindows(token_list, size = 3):
     if len(token_list) >= size:
@@ -69,24 +66,36 @@ def matchPattern(pattern, user_tweet_list):
     return word_counts
 
 def getPattern(user_tweet_list):
-    return [pattern for token_list in user_tweet_list for pattern in slideWindows(token_list, size = 2)]
+    return [pattern for token_list in user_tweet_list for pattern in slideWindows(token_list, size = 3)]
+
+def partition(text_list, chunk = 5):
+    chunksize = len(text_list)/chunk
+    start = 0
+    result_list = []
+    for _ in xrange(chunk):
+        end = start+chunksize
+        if len(text_list) < end+chunksize: result_list.append(text_list[start:])
+        else: result_list.append(text_list[start:end])
+        start = end
+    return result_list
 
 if __name__ == '__main__':
     # Using all cpu core -1
     pool = mp.Pool(processes=mp.cpu_count()-1)
     
+    # folder = '../../twitter crawler/regular/' # For single file
+    # file = 'regularUser_en_fixed.txt' # For single file
+    folder = '../patient emo_senti/' # for multi files
+    out_name = 'bipolar hashtag_3gram'
+    print("Load User Tweets from {}".format(folder))
+    # all_text_list = [loadTweets(folder, file)] # For single file
 
-    folder = '../patient emo_senti/'
-    out_name = 'bipolar pattern hashtag_2gram'
-    print("Load User Tweets")
-    print(folder)
-    all_text_list = [loadTweets( folder, user) for user in checkFolderFile(folder)]
-
-    print(len(all_text_list)) # file counts
-    dead_word_file = open('Dead_word','w')
+    all_text_list = [loadTweets( folder, user, text_loc = 3) for user in checkFolderFile(folder)] # for multi files
+    print('File Count: {}'.format(len(all_text_list)))
 
     print('Tokenize every tweets')
     tknzr = TweetTokenizer()
+    dead_word_file = open('Dead_word','w')
     for i, user_tweet_list in enumerate(all_text_list):
         for j, line in enumerate(user_tweet_list):
             try:
@@ -95,20 +104,20 @@ if __name__ == '__main__':
                 dead_word_file.write(line)
                 token_list = []
             all_text_list[i][j] = token_list
-
     dead_word_file.close()
 
-    # dict{ pattern : count}
-    pattern_dict = defaultdict(lambda : 0)
-    print('Go through Patterns')
-    
-    multi_res = [pool.apply_async(getPattern, (user_tweet_list,)) for user_tweet_list in all_text_list]
+    print('Sliding Windows')
+    # new_text_list = partition(all_text_list[0], chunk = mp.cpu_count()-1) # For single file
+    # all_text_list = None # For single file
+    # multi_res = [pool.apply_async(getPattern, (part_list,)) for part_list in new_text_list] # For single file
+    # new_text_list = None # For single file
 
-    print(len(multi_res))
-    print('Get every Patterns\nPut it in Counter')
+    multi_res = [pool.apply_async(getPattern, (user_tweet_list,)) for user_tweet_list in all_text_list] # for multi files
 
+    print('Put Pattern from {} chunks to Counter'.format(len(multi_res)))
     pattern_counter = Counter([pattern for res in multi_res for pattern in res.get()])
 
+    print('Total {} patterns'.format(len(pattern_counter)))
     print('Output to file')
     # Output to file
     with open(out_name,'w') as outfile:
