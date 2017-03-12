@@ -4,6 +4,7 @@ import re
 import multiprocessing as mp
 from collections import defaultdict
 from nltk.tokenize import TweetTokenizer
+import itertools
 import operator
 # function to delete url
 def del_url(line):
@@ -27,7 +28,7 @@ def checkFolderFile(folder):
 
 def loadTweets(folder, filename):
     with open(folder + filename, 'r') as openfile:
-        return [checkline(line.strip().split('\t')[3]) for line in openfile.readlines()]
+        return [checkline(line.strip().split('\t')[-1]) for line in openfile.readlines()]
 
 def combineWordToken(token_list):
     combine_list = ["n't","'m","'s"]
@@ -41,8 +42,8 @@ def combineWordToken(token_list):
 #     return [token.lower() for token in line.split(' ') if token != '']
 
 def slideWindows(token_list, size = 3):
-    if len(token_list) > size:
-        return getPatternCombination(token_list[:3]) + slideWindows(token_list[2:], size)
+    if len(token_list) >= size:
+        return getPatternCombination(token_list[:3]) + slideWindows(token_list[1:], size)
     else:
         return []
 
@@ -55,32 +56,62 @@ def getPatternCombination(pattern_word_list):
 
     return pattern_list
 
-def matchPattern(pattern, user_tweet_list = []):
+def matchPattern(pattern, all_text_list):
     pattern_token = pattern.replace('.','\.').replace('(','\(').replace(')','\)').replace('$','\$').replace('^','\^').split(' ')
     pattern_token[pattern_token.index('<\.>')] = '(?!\#|\@)\S+'
     word_counts = 0
-    for tweets in user_tweet_list:
-        try:
-            words = re.findall(' '.join(pattern_token) ,tweets)
-        except:
-            words = []
-        word_counts += len(words)
-    return word_counts
+    for user_tweet_list in all_text_list:
+        for tweets in user_tweet_list:
+            try:
+                words = re.findall(' '.join(pattern_token) ,tweets)
+            except:
+                words = []
+            word_counts += len(words)
+    return (pattern, word_counts)
+
+def LinetoPattern(tweets_list):
+    """Read a list and return a sequence of (pattern, occurances) values.
+    """
+    # print multiprocessing.current_process().name, 'reading', filename
+    output = []
+    for line in enumerate(tweets_list[0]):
+        token_list = line.split(' ')
+        # Go through new pattern
+        for pattern in slideWindows(token_list):
+            output.append( (pattern, 1) )
+    return output
+
+
+def count_pattern(item):
+    """Convert the partitioned data for a word to a
+    tuple containing the word and the number of occurances.
+    """
+    pattern, occurances = item
+    return (pattern, sum(occurances))
+
+def partition(self, mapped_values):
+    """Organize the mapped values by their key.
+    Returns an unsorted sequence of tuples with a key and a sequence of values.
+    """
+    partitioned_data = collections.defaultdict(list)
+    for key, value in mapped_values:
+        partitioned_data[key].append(value)
+    return partitioned_data.items()
 
 if __name__ == '__main__':
     # Using all cpu core -1
     pool = mp.Pool(processes=mp.cpu_count()-1)
     
 
-    # folder = '../../twitter crawler/patient_tweets/'
+    # folder = '../../twitter crawler/regular/'
     folder = '../patient emo_senti/'
-    out_name = 'Bipolar Pattern Year'
+    out_name = 'regular_user'
     print("Load User Tweets")
     print(folder)
-    all_text_list = [loadTweets( folder, user) for user in checkFolderFile(folder)[:1]]
+    all_text_list = [loadTweets( folder, user) for user in checkFolderFile(folder)]
 
     # print len(all_text_list) # file counts
-    dead_word_file = open('Dead_word','w')
+    dead_word_file = open('Dead_word_regular','w')
 
     print('Tokenize every tweets')
     tknzr = TweetTokenizer()
@@ -96,16 +127,16 @@ if __name__ == '__main__':
     dead_word_file.close()
 
     # dict{ pattern : count}
-    pattern_dict = defaultdict(lambda : None)
-    print('Go through Pattern')
+    pattern_dict = defaultdict(lambda : 0)
+    print('Go through Bipolar Pattern')
     for i, user_tweet_list in enumerate(all_text_list):
         for line in user_tweet_list:
             token_list = line.split(' ')
             # Go through new pattern
             for pattern in slideWindows(token_list):
+                bipolar used
                 if pattern not in pattern_dict:
-                    # print [matchPattern(pattern, user_tweet_list) for user_tweet_list in all_text_list]
-                    multi_res =[pool.apply_async(matchPattern, (pattern, user_tweet_list,)) for user_tweet_list in all_text_list]
+                    multi_res =[pool.apply_async(matchPattern, (pattern, all_text_list[i:],)) for user_tweet_list in all_text_list[i:]]
                     pattern_sum = sum([res.get() for res in multi_res])
                     print('\n{}\t{}\t{}'.format(i, pattern.encode('utf-8'), pattern_sum))
                     pattern_dict[pattern] = pattern_sum
