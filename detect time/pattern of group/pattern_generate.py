@@ -4,8 +4,7 @@ import re
 import multiprocessing as mp
 from collections import defaultdict
 from nltk.tokenize import TweetTokenizer
-import itertools
-import operator
+
 # function to delete url
 def del_url(line):
     return re.sub(r'(\S*(\.com).*)|(https?:\/\/.*)', "", line)
@@ -56,47 +55,18 @@ def getPatternCombination(pattern_word_list):
 
     return pattern_list
 
-def matchPattern(pattern, all_text_list):
+def matchPattern(pattern, user_tweet_list):
     pattern_token = pattern.replace('.','\.').replace('(','\(').replace(')','\)').replace('$','\$').replace('^','\^').split(' ')
     pattern_token[pattern_token.index('<\.>')] = '(?!\#|\@)\S+'
     word_counts = 0
-    for user_tweet_list in all_text_list:
-        for tweets in user_tweet_list:
-            try:
-                words = re.findall(' '.join(pattern_token) ,tweets)
-            except:
-                words = []
-            word_counts += len(words)
+    for tweets in user_tweet_list:
+        try:
+            words = re.findall(' '.join(pattern_token) ,tweets)
+        except:
+            words = []
+        word_counts += len(words)
     return (pattern, word_counts)
 
-def LinetoPattern(tweets_list):
-    """Read a list and return a sequence of (pattern, occurances) values.
-    """
-    # print multiprocessing.current_process().name, 'reading', filename
-    output = []
-    for line in enumerate(tweets_list[0]):
-        token_list = line.split(' ')
-        # Go through new pattern
-        for pattern in slideWindows(token_list):
-            output.append( (pattern, 1) )
-    return output
-
-
-def count_pattern(item):
-    """Convert the partitioned data for a word to a
-    tuple containing the word and the number of occurances.
-    """
-    pattern, occurances = item
-    return (pattern, sum(occurances))
-
-def partition(self, mapped_values):
-    """Organize the mapped values by their key.
-    Returns an unsorted sequence of tuples with a key and a sequence of values.
-    """
-    partitioned_data = collections.defaultdict(list)
-    for key, value in mapped_values:
-        partitioned_data[key].append(value)
-    return partitioned_data.items()
 
 if __name__ == '__main__':
     # Using all cpu core -1
@@ -128,15 +98,14 @@ if __name__ == '__main__':
 
     # dict{ pattern : count}
     pattern_dict = defaultdict(lambda : 0)
-    print('Go through Bipolar Pattern')
+    print('Go through Patterns')
     for i, user_tweet_list in enumerate(all_text_list):
         for line in user_tweet_list:
             token_list = line.split(' ')
             # Go through new pattern
             for pattern in slideWindows(token_list):
-                bipolar used
                 if pattern not in pattern_dict:
-                    multi_res =[pool.apply_async(matchPattern, (pattern, all_text_list[i:],)) for user_tweet_list in all_text_list[i:]]
+                    multi_res =[pool.apply_async(matchPattern, (pattern, user_tweet_list,)) for user_tweet_list in all_text_list[i:]]
                     pattern_sum = sum([res.get() for res in multi_res])
                     print('\n{}\t{}\t{}'.format(i, pattern.encode('utf-8'), pattern_sum))
                     pattern_dict[pattern] = pattern_sum
@@ -146,5 +115,3 @@ if __name__ == '__main__':
     with open(out_name,'w') as outfile:
         for pattern, count in sorted_pattern_dict:
             outfile.write('{}\t{}\n'.format(pattern.encode('utf-8'), count))
-
-
