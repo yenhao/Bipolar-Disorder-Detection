@@ -4,6 +4,7 @@ import re
 import multiprocessing as mp
 from collections import defaultdict
 from nltk.tokenize import TweetTokenizer
+import operator
 
 # function to delete url
 def del_url(line):
@@ -27,7 +28,7 @@ def checkFolderFile(folder):
 
 def loadTweets(folder, filename):
     with open(folder + filename, 'r') as openfile:
-        return [checkline(line.strip().split('\t')[-1]) for line in openfile.readlines()]
+        return [checkline(line.strip().split('\t')[3]) for line in openfile.readlines()]
 
 def combineWordToken(token_list):
     combine_list = ["n't","'m","'s"]
@@ -60,12 +61,13 @@ def matchPattern(pattern, user_tweet_list):
     pattern_token[pattern_token.index('<\.>')] = '(?!\#|\@)\S+'
     word_counts = 0
     for tweets in user_tweet_list:
+    tweets = ' '.join(tweets)
         try:
             words = re.findall(' '.join(pattern_token) ,tweets)
         except:
             words = []
         word_counts += len(words)
-    return (pattern, word_counts)
+    return word_counts
 
 
 if __name__ == '__main__':
@@ -73,15 +75,14 @@ if __name__ == '__main__':
     pool = mp.Pool(processes=mp.cpu_count()-1)
     
 
-    # folder = '../../twitter crawler/regular/'
-    folder = '../patient emo_senti/'
-    out_name = 'regular_user'
+    folder = '../pattern of life/patient emo_senti/'
+    out_name = 'bipolar pattern'
     print("Load User Tweets")
     print(folder)
-    all_text_list = [loadTweets( folder, user) for user in checkFolderFile(folder)]
+    all_text_list = [loadTweets( folder, user) for user in checkFolderFile(folder)[:2]]
 
-    # print len(all_text_list) # file counts
-    dead_word_file = open('Dead_word_regular','w')
+    print(len(all_text_list)) # file counts
+    dead_word_file = open('Dead_word','w')
 
     print('Tokenize every tweets')
     tknzr = TweetTokenizer()
@@ -92,7 +93,7 @@ if __name__ == '__main__':
             except:
                 dead_word_file.write(line)
                 token_list = []
-            all_text_list[i][j] = ' '.join(token_list)
+            all_text_list[i][j] = token_list
 
     dead_word_file.close()
 
@@ -100,8 +101,7 @@ if __name__ == '__main__':
     pattern_dict = defaultdict(lambda : 0)
     print('Go through Patterns')
     for i, user_tweet_list in enumerate(all_text_list):
-        for line in user_tweet_list:
-            token_list = line.split(' ')
+        for token_list in user_tweet_list:
             # Go through new pattern
             for pattern in slideWindows(token_list):
                 if pattern not in pattern_dict:
@@ -110,6 +110,7 @@ if __name__ == '__main__':
                     print('\n{}\t{}\t{}'.format(i, pattern.encode('utf-8'), pattern_sum))
                     pattern_dict[pattern] = pattern_sum
 
+    print('Output to file')
     # Output to file
     sorted_pattern_dict = sorted(pattern_dict.items(), key=operator.itemgetter(1), reverse=True)
     with open(out_name,'w') as outfile:
