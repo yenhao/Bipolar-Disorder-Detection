@@ -5,6 +5,7 @@ import multiprocessing as mp
 from collections import defaultdict, Counter
 from nltk.tokenize import TweetTokenizer
 import operator
+from time import gmtime, strftime
 
 # function to delete url
 def del_url(line):
@@ -38,9 +39,10 @@ def combineWordToken(token_list):
             token_list[i:i+2] = [''.join(token_list[i:i+2])]
     return token_list
 
-def slideWindows(token_list, size = 3):
+def slideWindows(token_list, size = 3, combine = True):
     if len(token_list) >= size:
-        return getPatternCombination(token_list[:size], size) + slideWindows(token_list[1:], size)
+        if combine == True:return getPatternCombination(token_list[:size], size) + slideWindows(token_list[1:], size)
+        else: return [' '.join(token_list[:size])] + slideWindows(token_list[1:], size, combine)
     else:
         return []
 
@@ -65,8 +67,8 @@ def matchPattern(pattern, user_tweet_list):
         word_counts += len(words)
     return word_counts
 
-def getPattern(user_tweet_list):
-    return [pattern for token_list in user_tweet_list for pattern in slideWindows(token_list, size = 3)]
+def getPattern(user_tweet_list, size = 3, combine = True):
+    return [pattern for token_list in user_tweet_list for pattern in slideWindows(token_list, size, combine)]
 
 def partition(text_list, chunk = 5):
     chunksize = len(text_list)/chunk
@@ -82,7 +84,7 @@ def partition(text_list, chunk = 5):
 if __name__ == '__main__':
     # Using all cpu core -1
     pool = mp.Pool(processes=mp.cpu_count()-1)
-    
+    print(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
     # folder = '../../twitter crawler/regular/' # For single file
     # file = 'regularUser_en_fixed.txt' # For single file
     folder = '../patient emo_senti/' # for multi files
@@ -93,7 +95,7 @@ if __name__ == '__main__':
     all_text_list = [loadTweets( folder, user, text_loc = 3) for user in checkFolderFile(folder)] # for multi files
     print('File Count: {}'.format(len(all_text_list)))
 
-    print('Tokenize every tweets')
+    print('Tokenizing every tweets')
     tknzr = TweetTokenizer()
     dead_word_file = open('Dead_word','w')
     for i, user_tweet_list in enumerate(all_text_list):
@@ -108,15 +110,15 @@ if __name__ == '__main__':
 
     print('Sliding Windows')
     # new_text_list = partition(all_text_list[0], chunk = mp.cpu_count()-1) # For single file
-    # all_text_list = None # For single file
+    # del all_text_list # For single file
     # multi_res = [pool.apply_async(getPattern, (part_list,)) for part_list in new_text_list] # For single file
     # new_text_list = None # For single file
 
-    multi_res = [pool.apply_async(getPattern, (user_tweet_list,)) for user_tweet_list in all_text_list] # for multi files
-
+    multi_res = [pool.apply_async(getPattern, (user_tweet_list, 3, True,)) for user_tweet_list in all_text_list] # for multi files
+    print(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
     print('Put Pattern from {} chunks to Counter'.format(len(multi_res)))
     pattern_counter = Counter([pattern for res in multi_res for pattern in res.get()])
-
+    print(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
     print('Total {} patterns'.format(len(pattern_counter)))
     print('Output to file')
     # Output to file
