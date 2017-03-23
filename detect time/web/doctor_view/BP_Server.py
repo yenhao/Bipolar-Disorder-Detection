@@ -6,29 +6,33 @@ import matplotlib.pyplot as plt
 import re
 import os
 from datetime import datetime, timedelta
+from pymongo import MongoClient
 
 app = Flask(__name__)
 
 # function to delete url
 def del_url(line):
-    return re.sub(r'(\S*(\.com).*)|(https?:\/\/.*)', "", line)
+    return re.sub(r'(\S*\.com\S*)|(https?:\/\/\S*)', "", line)
 # replace hashtag
 def checktag(line): 
     return re.sub(r'\@\S*', " <username> ", line)
 
-# Initial
-def loadTweets():
-    print('Loading Daily Tweets..')
-    # {username:{int(date):{[(datetime,content),...]}}}
-    tweets_dict = defaultdict(lambda: defaultdict(lambda:[]))
-    with open('../../organized/date_sentiment_tweets') as tweets:
-        for line in tweets.readlines():
-            username, date, datetime, content, sentiment = line.split('\t')
-            tweets_dict[username][int(date)].append((datetime, content, sentiment))
+def checkFolderFile(folder):
+    return os.listdir(folder)
 
-    global user_tweets_dict
-    user_tweets_dict = tweets_dict
-    print('Finished! \n')
+# Initial
+# ## Read BD_user
+def loadTweets(folder):
+    tweets_dict = defaultdict(lambda:defaultdict(lambda: []))
+    for filename in checkFolderFile(folder):
+        with open(folder + filename, 'r') as openfile:
+            for line in openfile.readlines():
+                try:
+                    username, date, datetime, content, sentiment, emotion1, emotion2, ambiguous = line.split('\t')
+                except:
+                    print(line.split('\t'))
+                tweets_dict[username][int(date)].append((datetime, content, sentiment, emotion1, emotion2, ambiguous.strip()))
+    return tweets_dict
 
 def loadUserInfo():
     print('Loading User Information..')
@@ -51,25 +55,10 @@ def loadUserInfo():
                 statement = 'Unavailable'
             user_dict[username] = ((illtime, start, end.strip(), statement))
 
-    global user_info_dict
-    user_info_dict = user_dict
-    print('Finished! \n')
+    return user_dict
 
-def init():
-    loadTweets()
-    loadUserInfo()
-
-user_tweets_dict = None
-user_info_dict = None
-
-
-init()
-
-print('User Count for user_tweets is %d' % len(user_tweets_dict))
-print('User Count for user_info is %d' % len(user_info_dict))
-
-user_list = [user for user in user_info_dict]
-print('User list has been built!')
+user_tweets_dict = loadTweets('../../patient emo_senti/')
+user_info_dict = loadUserInfo()
 
 def convertDatetime(orig_time):
     return datetime.strptime(str(orig_time), "%Y%m%d")
@@ -103,6 +92,7 @@ def getTweetLFCount(user):
         post_list.append(post_count)
 
         late_count = 0
+        # datetime, content, sentiment, emotion1, emotion2, ambiguous
         for tweet in user_tweets_dict[user][date]:
             tweet_time = tweet[0]
             if int(tweet_time.split(' ')[1].split(':')[1]) < 6:
@@ -157,6 +147,21 @@ def index2():
     tweets_list = []
     return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
 
+@app.route("/queryname")
+def queryname():
+    username = request.args.get('user')
+
+    if username in user_list:
+        index = user_list.index(username)
+    else:
+        print("No User")
+        index = 1
+    print('\n\nRetrieving User : ' + str(user_list[index]).decode('utf-8'))
+    print('Index : ' + str(index))
+    tweets_list = []
+    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
+
+
 @app.route("/view2", methods=['GET'])
 def view2():
     index = int(request.args.get('user'))
@@ -200,6 +205,7 @@ def returnTweets():
         '''.format(start, end)
     tweets_text = ''
     sorted_date_user = sorted(user_tweets_dict[user])
+    # datetime, content, sentiment, emotion1, emotion2, ambiguous
     for date in sorted_date_user:
         if date >= int(start.replace('/','')) and date <= int(end.replace('/','')):
             tweets = user_tweets_dict[user][date]
@@ -258,6 +264,7 @@ def viewTweets():
     tweets_text = ''
     # Prepare tweets list
     sorted_date_user = sorted(user_tweets_dict[user])
+    # datetime, content, sentiment, emotion1, emotion2, ambiguous
     tweets_list = []
     for date in sorted_date_user:
         if date >= int(start.replace('/','')) and date <= int(end.replace('/','')):
@@ -300,15 +307,20 @@ def viewTweets():
     return render_template("emotion_tweets.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], htmlTweets = str(html_content).decode('utf-8'), img_url = img_url, tweets_list = tweets_list, index=index)
 
 
+print('User Count for user_tweets is %d' % len(user_tweets_dict))
+print('User Count for user_info is %d' % len(user_info_dict))
+
+user_list = [user for user in user_info_dict]
+print('User list has been built!')
+
+
 
 if __name__ == '__main__':
 
-    if len(user_tweets_dict) == len(user_info_dict) : 
-        print('SUCCESS : User Count Match!\n Service Start!\n\n')
-        app.run(debug = True)
-        # app.run()
-    else:
-        print('FAIL : Count doesn\'t Match!\n Shut Down..\n\n')
-
-
-    
+    # if len(user_tweets_dict) == len(user_info_dict) : 
+    #     print('SUCCESS : User Count Match!\n Service Start!\n\n')
+    #     app.run('0.0.0.0',debug = False)
+    #     # app.run()
+    # else:
+    #     print('FAIL : Count doesn\'t Match!\n Shut Down..\n\n')
+    app.run('0.0.0.0',debug = False)
