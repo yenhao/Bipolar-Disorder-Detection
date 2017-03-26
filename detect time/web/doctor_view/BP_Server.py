@@ -28,10 +28,11 @@ def loadTweets(folder):
         with open(folder + filename, 'r') as openfile:
             for line in openfile.readlines():
                 try:
-                    username, date, datetime, content, sentiment, emotion1, emotion2, ambiguous = line.split('\t')
+                    username, date, tweettime, content, sentiment, emotion1, emotion2, ambiguous = line.split('\t')
                 except:
                     print(line.split('\t'))
-                tweets_dict[username][int(date)].append((datetime, content, sentiment, emotion1, emotion2, ambiguous.strip()))
+                tweettime = datetime.strptime(tweettime, "%Y-%m-%d %H:%M:%S") - timedelta(hours=8)
+                tweets_dict[username][int(tweettime.strftime("%Y%m%d"))].append((tweettime.strftime("%Y-%m-%d %H:%M:%S"), content, sentiment, emotion1, emotion2, ambiguous.strip()))
     return tweets_dict
 
 def loadUserInfo():
@@ -85,8 +86,6 @@ def getTweetLFCount(user):
                     late_list.append(0)
         
         last_date = date
-
-
         date_list.append(str(date)[:4]+'-'+str(date)[4:6]+'-'+str(date)[6:])
         post_count = len(user_tweets_dict[user][date])
         post_list.append(post_count)
@@ -95,10 +94,10 @@ def getTweetLFCount(user):
         # datetime, content, sentiment, emotion1, emotion2, ambiguous
         for tweet in user_tweets_dict[user][date]:
             tweet_time = tweet[0]
-            if int(tweet_time.split(' ')[1].split(':')[1]) < 6:
+            if int(tweet_time.split(' ')[1].split(':')[0]) < 6:
                 late_count +=1
         late_list.append(late_count)
-    return (zip(date_list, post_list), zip(date_list, late_list), date_list[0], date_list[1] ,len(date_list))
+    return (zip(date_list, post_list), zip(date_list, late_list), date_list[0], date_list[-1] ,len(date_list))
 
 
 
@@ -310,7 +309,7 @@ def viewTweets():
 print('User Count for user_tweets is %d' % len(user_tweets_dict))
 print('User Count for user_info is %d' % len(user_info_dict))
 
-user_list = [user for user in user_info_dict]
+user_list = [user for user in user_tweets_dict]
 print('User list has been built!')
 
 
@@ -323,4 +322,4 @@ if __name__ == '__main__':
     #     # app.run()
     # else:
     #     print('FAIL : Count doesn\'t Match!\n Shut Down..\n\n')
-    app.run('0.0.0.0',debug = False)
+    app.run('0.0.0.0',debug = False, port=5001)

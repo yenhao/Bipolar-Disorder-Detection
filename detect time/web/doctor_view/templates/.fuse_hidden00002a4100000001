@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <title>Bipolar Status Viewer</title>
+
+  <!-- Bootstrap -->
+  <link href="{{ url_for('static', filename = 'dist/css/bootstrap.min.css') }}" rel="stylesheet">
+
+  <link href="{{ url_for('static', filename = 'css/style.css') }}" rel="stylesheet">
+</head>
+<style>
+  .axis path, .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+  }
+  path.line {
+      fill: none;
+      stroke-width: 1px;
+  }
+  .zoomOut {
+      fill: #66a;
+      cursor: pointer;
+  }
+  .zoomOutText {
+      pointer-events: none;
+      fill : #ccc;
+  }
+  .zoomOverlay {
+      pointer-events: all;
+      fill:none;
+  }
+  .band {
+      fill : none;
+      stroke-width: 1px;
+      stroke: red;
+  }
+ 
+</style>
+<body>
+  <div class="container" id="head">
+    <div class="user-content">
+      <h1><b>{{ user }}</b></h1>
+      <div id="diagnose-statement">
+        <blockquote class="blockquote">
+          <p class="lead">{{ user_info_dict[3][1] }}</p>
+          <footer><cite title="Source Title">{{ user_info_dict[3][0] }}</cite></footer>
+        </blockquote>
+      </div>
+    </div>
+  </div>
+  <center>
+    <div id="graph"></div>    
+  </center>
+
+  <center>
+    <div class="wordcloud" id="wordcloud"></div>
+  </center>
+  <div class="container" id="tweets"></div>
+  <!-- D3 js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+  <script src="{{ url_for('static', filename = 'js/jquery.min.js') }}"></script>
+  <script>
+   
+    // Parse the date / time
+    var parseDate = d3.time.format("%Y-%m-%d").parse;
+
+    var data_total = [];
+
+    var data = new Array();
+    {%- for freq in LFlist[0]%}
+    data.push({"date":parseDate("{{ freq[0] }}"),"total":{{ freq[1] }}});
+    {%- endfor %}
+
+
+    var data2 = new Array();
+    {%- for late in LFlist[1]%}
+    data2.push({"date":parseDate("{{ late[0] }}"),"total":{{ late[1] }}});
+    {%- endfor %}
+    // var data = [{"date":"2012-03-20","total":3},{"date":"2012-03-21","total":8},{"date":"2012-03-22","total":2},{"date":"2012-03-23","total":10},{"date":"2012-03-24","total":3},{"date":"2012-03-25","total":20},{"date":"2012-03-26","total":12}];
+    
+    console.log(data);
+    console.log(data2);
+
+    data_total.push(data);
+    data_total.push(data2);
+
+    var global_x1;
+    var global_x2;
+
+    var colors = ["steelblue", "orange"];
+    var bandPos = [-1, -1];
+    var pos;
+    var ydomain;
+    var xbegin = data[0].date;
+    var xdomain = data[data.length -1].date;
+
+    var y1 = d3.max(data , function(d) { return d.total; });
+    var y2 = d3.max(data2 , function(d) { return d.total; });
+
+    if(y1>=y2){
+      ydomain = y1;
+    }else{
+      ydomain = y2;
+    }
+
+    var margin = {
+      top: 40,
+      right: 40,
+      bottom: 50,
+      left: 60
+    }
+    var width = 1200 - margin.left - margin.right;
+    var height = 450 - margin.top - margin.bottom;
+    var zoomArea = {
+      x1: xbegin,
+      y1: 0,
+      x2: xdomain,
+      y2: ydomain
+    };
+    var drag = d3.behavior.drag();
+
+    var svg = d3.select("#graph").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+    var x = d3.time.scale()
+      .range([0, width]).domain(d3.extent(data, function(d) { return d.date; }));
+
+    var y = d3.scale.linear()
+      .range([height, 0]).domain([0, ydomain]);
+
+    var xAxis = d3.svg.axis()
+      .scale(x)
+      .orient("bottom").ticks(15);
+
+    var yAxis = d3.svg.axis()
+      .scale(y)
+      .orient("left");
+
+    var line = d3.svg.line()
+      .interpolate("basis")
+      .x(function(d) {
+        return x(d.date);
+      })
+      .y(function(d) {
+        return y(d.total);
+      });
+
+    var band = svg.append("rect")
+      .attr("width", 0)
+      .attr("height", 0)
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("class", "band");
+
+    svg.append("g")
+      .attr("class", "x axis")
+      .call(xAxis)
+      .attr("transform", "translate(0," + height + ")");
+
+    svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+
+    svg.append("clipPath")
+      .attr("id", "clip")
+      .append("rect")
+      .attr("width", width)
+      .attr("height", height);
+
+    for (idx in data_total) {
+      svg.append("path")
+        .datum(data_total[idx])
+        .attr("class", "line line" + idx)
+        .attr("clip-path", "url(#clip)")
+        .style("stroke", colors[idx])
+        .attr("d", line);
+    }
+
+    var zoomOverlay = svg.append("rect")
+      .attr("width", width - 10)
+      .attr("height", height)
+      .attr("class", "zoomOverlay")
+      .call(drag);
+
+    var zoomout = svg.append("g");
+
+    zoomout.append("rect")
+      .attr("class", "zoomOut")
+      .attr("width", 75)
+      .attr("height", 40)
+      .attr("x", -12)
+      .attr("y", height + (margin.bottom - 20))
+      .on("click", function() {
+        zoomOut();
+      });
+
+    zoomout.append("text")
+      .attr("class", "zoomOutText")
+      .attr("width", 75)
+      .attr("height", 30)
+      .attr("x", -10)
+      .attr("y", height + (margin.bottom - 5))
+      .text("Zoom Out");
+
+    zoom();
+
+    drag.on("dragend", function() {
+      var pos = d3.mouse(this);
+      var x1 = x.invert(bandPos[0]);
+      var x2 = x.invert(pos[0]);
+
+      if (x1 < x2) {
+        zoomArea.x1 = x1;
+        zoomArea.x2 = x2;
+      } else {
+        zoomArea.x1 = x2;
+        zoomArea.x2 = x1;
+      }
+
+      var y1 = y.invert(pos[1]);
+      var y2 = y.invert(bandPos[1]);
+
+      if (x1 < x2) {
+        zoomArea.y1 = y1;
+        zoomArea.y2 = y2;
+      } else {
+        zoomArea.y1 = y2;
+        zoomArea.y2 = y1;
+      }
+
+      bandPos = [-1, -1];
+
+      d3.select(".band").transition()
+        .attr("width", 0)
+        .attr("height", 0)
+        .attr("x", bandPos[0])
+        .attr("y", bandPos[1]);
+
+      zoom();
+      // after get drag x1, x2, we are able to generate wordcloud 
+      // alert(global_x1);
+      // alert(global_x2);
+      viewTweets()
+    });
+
+    drag.on("drag", function() {
+
+      var pos = d3.mouse(this);
+
+      if (pos[0] < bandPos[0]) {
+        d3.select(".band").
+        attr("transform", "translate(" + (pos[0]) + "," + bandPos[1] + ")");
+      }
+      if (pos[1] < bandPos[1]) {
+        d3.select(".band").
+        attr("transform", "translate(" + (pos[0]) + "," + pos[1] + ")");
+      }
+      if (pos[1] < bandPos[1] && pos[0] > bandPos[0]) {
+        d3.select(".band").
+        attr("transform", "translate(" + (bandPos[0]) + "," + pos[1] + ")");
+      }
+
+      //set new position of band when user initializes drag
+      if (bandPos[0] == -1) {
+        bandPos = pos;
+        d3.select(".band").attr("transform", "translate(" + bandPos[0] + "," + bandPos[1] + ")");
+      }
+
+      d3.select(".band").transition().duration(1)
+        .attr("width", Math.abs(bandPos[0] - pos[0]))
+        .attr("height", Math.abs(bandPos[1] - pos[1]));
+    });
+
+    function zoom() {
+      //recalculate domains
+      if (zoomArea.x1 > zoomArea.x2) {
+        x.domain([zoomArea.x2, zoomArea.x1]);
+        // to set the global x1, x2 to get time area
+        global_x1 = zoomArea.x2;
+        global_x2 = zoomArea.x1;
+      } else {
+        x.domain([zoomArea.x1, zoomArea.x2]);
+        global_x1 = zoomArea.x1;
+        global_x2 = zoomArea.x2;
+      }
+
+      if (zoomArea.y1 > zoomArea.y2) {
+        y.domain([zoomArea.y2, zoomArea.y1]);
+      } else {
+        y.domain([zoomArea.y1, zoomArea.y2]);
+      }
+
+      //update axis and redraw lines
+      var t = svg.transition().duration(750);
+      t.select(".x.axis").call(xAxis);
+      t.select(".y.axis").call(yAxis);
+
+      t.selectAll(".line").attr("d", line); 
+    }
+
+    var zoomOut = function() {
+      x.domain([xbegin, xdomain]);
+      y.domain([0, ydomain]);
+
+      var t = svg.transition().duration(750);
+      t.select(".x.axis").call(xAxis);
+      t.select(".y.axis").call(yAxis);
+
+      t.selectAll(".line").attr("d", line);
+    };
+
+    function viewTweets(){
+      var Ymd = d3.time.format("%Y/%m/%d");
+      var date_query = new Array();
+      console.log(global_x1>global_x2);
+      console.log('Retrieve tweets from ' + Ymd(global_x1) + ' to ' + Ymd(global_x2));
+      $(".select-label").each(function(){
+        date_query.push($(this).text());
+        console.log($(this).text());
+        });
+      $.ajax({
+        url: '/getTweets',
+        data: { user: "{{ user }}",
+                start: Ymd(global_x1),
+                end: Ymd(global_x2)
+              },
+        type: 'POST',
+        success: function(response) {
+            
+            response_array = response.split("!@!@!");
+            $(".wordcloud").html(response_array[0]);
+            $("#tweets").html(response_array[1]);
+            window.location.href='#wordcloud';
+        },
+        error: function(error) {
+            console.log(error);
+        }
+      });
+    }
+
+  </script>
+  </body>
+</html>

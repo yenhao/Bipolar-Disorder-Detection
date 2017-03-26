@@ -1,3 +1,4 @@
+# coding=utf-8
 from flask import Flask, render_template, url_for, request
 from collections import defaultdict
 import random
@@ -8,6 +9,10 @@ import os
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 import pytz
+import sys  
+
+reload(sys)  
+sys.setdefaultencoding('utf8')
 
 app = Flask(__name__)
 
@@ -18,7 +23,8 @@ def del_url(line):
 def checktag(line): 
     return re.sub(r'\@\S*', " <username> ", line)
 
-user_info_dict = defaultdict(lambda: None)
+user_list = []
+user_info_dict = defaultdict(lambda: ('2017/3/25', '20110101', '20170101', ('10/11/2017 04:58','No statement')))
 timezone_location_dict = {
     'Pacific Time (US & Canada)':'US/Pacific',
     'Central Time (US & Canada)':'US/Central',
@@ -96,13 +102,14 @@ def readTimezone(folder, filename):
                 continue
     return time_dict
 
-def getUsersTweets(dbName,collectionName, en_threshold=0.9, timezone_dict = timezone_location_dict ,regular_timezone_dict = readTimezone('../../../twitter crawler/','regularUser_en_fixed_timezone')):
+
+def getUsersTweets(dbName,collectionName, en_threshold=0.9, timezone_dict = timezone_location_dict ,regular_timezone_dict = readTimezone('../../../twitter crawler/','regularUser_en_fixed_timezone'), user_info_dict= user_info_dict):
     cursor = MongoClient("localhost", 27017)[dbName][collectionName].find()
     # lang_ratios = getLangRatio(cursor)
     cursor = MongoClient("localhost", 27017)[dbName][collectionName].find()
-    usersTweets = {}
+    usersTweets = defaultdict(lambda: defaultdict(lambda: []))
     for tweet in cursor:
-        userID = tweet["user"]["id"]
+        userID = str(tweet["user"]["id"])
         
         try:
             user_timezone = timezone_dict[regular_timezone_dict[str(userID)]]
@@ -131,25 +138,15 @@ def getUsersTweets(dbName,collectionName, en_threshold=0.9, timezone_dict = time
         date = to_local_timezone( user_timezone, tweet["created_at"].strftime("%Y-%m-%d %H:%M:%S")) - timedelta(hours = 8) #Modify the time! Because get all tweets is from taiwan(+8) not +0
         text = tweet['text']
 
-        if userID not in usersTweets:
-            usersTweets[userID] = {}
-        if date not in usersTweets[userID]:
-            usersTweets[userID][date] = {}
-            
-        usersTweets[userID][date]['text'] = text
-        usersTweets[userID][date]['name'] = userID
-        usersTweets[userID][date]['polarity'] =  polarity
-        usersTweets[userID][date]['emotion'] =  emotion
-        usersTweets[userID][date]['emotion_2'] =  emotion_2
-        usersTweets[userID][date]['ambiguous'] =  ambiguous
-
+        usersTweets[userID][int(date.strftime("%Y%m%d"))].append((date, text, polarity, emotion, emotion_2, ambiguous))
 
     for user in usersTweets:
+        user_list.append(user)
         sorted_usersTweets = sorted(usersTweets[user])
-        global user_info_dict
-        user_info_dict[str(userID)] = ('20150101', sorted_usersTweets[0].strftime("%Y%m%d"), sorted_usersTweets[-1].strftime("%Y%m%d"), 'I am Regular User!')
+        user_info_dict[str(userID)] = ('2015/01/01', sorted_usersTweets[0], sorted_usersTweets[-1], ('25/3/2017','I am Regular User!'))
 
     return usersTweets
+
 
 def getTweetLFCount(user):
     print('Get Tweet Freq Late Count! \n')
@@ -161,30 +158,32 @@ def getTweetLFCount(user):
     for date in sorted_date_user:
         # Check date change
         if last_date != None:
-            date_diff = (date - last_date).days
+            date_diff = (datetime.strptime(str(date),"%Y%m%d") - last_date).days
             # If day difference > 1day
             # Append the gap, with date, frequence = 0, late = 0
             if date_diff > 1:
                 for i in range(date_diff)[1:]:
-                    temp_date = convertDatetime(last_date) + timedelta(days=i)
+                    temp_date = last_date + timedelta(days=i)
                     temp_date = temp_date.strftime("%Y%m%d")
                     date_list.append(str(temp_date)[:4]+'-'+str(temp_date)[4:6]+'-'+str(temp_date)[6:])
                     post_list.append(0)
                     late_list.append(0)
         
-        last_date = date
-        temp_date = date.strftime("%Y%m%d")
-        date_list.append(str(temp_date)[:4]+'-'+str(temp_date)[4:6]+'-'+str(temp_date)[6:])
-        post_count = len(user_tweets_dict[user][date])
-        post_list.append(post_count)
-
-        late_count = 0
-        # datetime, content, sentiment, emotion1, emotion2, ambiguous
+        last_date = datetime.strptime(str(date),"%Y%m%d")
+        date_list.append(str(last_date.strftime("%Y-%m-%d")))
+        post_list.append(len(regular_tweets[user][date]))
         
-        if int(date.hour) < 6:
-            late_count +=1
+        # datetime, content, sentiment, emotion1, emotion2, ambiguous
+        late_count = 0
+        for tweet_info in regular_tweets[user][date]:
+            if int(tweet_info[0].hour) < 6:
+                late_count +=1
+            
         late_list.append(late_count)
-    return (zip(date_list, post_list), zip(date_list, late_list), date_list[0], date_list[1] ,len(date_list))
+    return (zip(date_list, post_list), zip(date_list, late_list), date_list[0], date_list[-1] ,len(date_list))
+
+def convertDatetime(orig_time):
+    return datetime.strptime(str(orig_time), "%Y-%m-%d %H:%M:%S")
 
 @app.route("/index")
 def index2():
@@ -213,7 +212,7 @@ def queryname():
     tweets_list = []
     # {username:{(illtime,start,end,statement)}}
     
-    return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
+    return render_template("index2.html", user = str(username), user_info_dict = user_info_dict[str(username)], LFlist = getTweetLFCount(str(username)), index=index)
 
 
 @app.route("/view2", methods=['GET'])
@@ -241,61 +240,6 @@ def next2():
     print('Index : ' + str(index))
     return render_template("index2.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], LFlist = getTweetLFCount(str(user_list[index])), index=index)
 
-
-@app.route("/getTweets", methods=['POST'])
-def returnTweets():
-    user = request.form['user']
-    start = request.form['start']
-    end = request.form['end']
-
-    print('Query getTweets : User : ' + user + ', Start from ' + start + ', End at ' + end)
-    #Generate user tweets html
-    html_content = '''
-        <div class="row">
-            <h3>Tweets from {} to {} </h3>
-        </div>
-        <br/>
-        <div class="list-group" style="padding-bottom:150px">
-        '''.format(start, end)
-    tweets_text = ''
-    sorted_date_user = sorted(user_tweets_dict[user])
-    # datetime, content, sentiment, emotion1, emotion2, ambiguous
-    for date in sorted_date_user:
-        if date >= int(start.replace('/','')) and date <= int(end.replace('/','')):
-            tweets = user_tweets_dict[user][date]
-            for tweet in tweets:
-                html_content += '''
-                    <a class="list-group-item">
-                        <h4 class="list-group-item-heading">{}</h4>
-                        <p class="list-group-item-text">{}</p>
-                    </a>
-                    '''.format(tweet[1],tweet[0])
-                tweets_text += checktag(del_url(tweet[1])) + ' '
-    html_content += '</div><center><a class="btn btn-lg btn-default" href="#head" role="button">Top</a></center><br/>'
-
-
-    filename = user + '_' +start.replace('/','') + end.replace('/','') + '.png'
-    # if exist means duplicate
-    if os.path.exists('static/img/wordcloud/' + filename): 
-        print('Duplicate File! ' + filename)
-    else:
-        # Generate a word cloud image
-        # lower max_font_size
-        wordcloud = WordCloud(max_font_size=60, scale=2).generate(tweets_text)
-        plt.figure()
-        plt.imshow(wordcloud)
-        plt.axis("off")
-        # plt.show()
-        fig = plt.gcf()
-        # fig.set_size_inches(18.5, 14.5, forward=True)
-        
-        fig.savefig('static/img/wordcloud/' + filename, dpi=250)
-        plt.clf()
-
-    img_html = "<img src=\"/static/img/wordcloud/"+filename+"\" >"
-
-    return str(img_html) + '!@!@!' + str(html_content)
-
 @app.route("/viewTweets")
 def viewTweets():
     index = int(request.args.get('index'))
@@ -317,24 +261,23 @@ def viewTweets():
         '''.format(start, end)
     tweets_text = ''
     # Prepare tweets list
-    sorted_date_user = sorted(user_tweets_dict[user])
+    sorted_date_user = sorted(regular_tweets[user])
     # datetime, content, sentiment, emotion1, emotion2, ambiguous
     tweets_list = []
     for date in sorted_date_user:
-        if date >= int(start.replace('/','')) and date <= int(end.replace('/','')):
-            tweets = user_tweets_dict[user][date]
+        if datetime.strptime(str(date), "%Y%m%d") >= datetime.strptime(start, "%Y/%m/%d") and datetime.strptime(str(date), "%Y%m%d") <= datetime.strptime(end, "%Y/%m/%d"):
+            tweets = regular_tweets[user][date]
             for tweet in tweets:
                 html_content += '''
                     <a class="list-group-item">
                         <h4 class="list-group-item-heading">{}</h4>
                         <p class="list-group-item-text">{}</p>
                     </a>
-                    '''.format(tweet[1],tweet[0])
+                    '''.format(tweet[1],tweet[0].strftime("%Y-%m-%d %H:%M:%S"))
                 tweets_text += checktag(del_url(tweet[1])) + ' '
                 # Append tweets list
-                tweets_list.append(tweet[0] + '|~|~|' + tweet[1].decode('utf-8').replace('\\','\\\\') + '|~|~|' + tweet[2].strip())
+                tweets_list.append(tweet[0].strftime("%Y-%m-%d %H:%M:%S") + '|~|~|' + tweet[1].replace('\n',' ').replace('\r', ' ').replace('\\','\\\\') + '|~|~|' + str(tweet[2]))
     html_content += '</div><center><a class="btn btn-lg btn-default" href="#head" role="button">Top</a></center><br/>'
-
 
     filename = user + '_' +start.replace('/','') + end.replace('/','') + '.png'
     # if exist means duplicate
@@ -349,16 +292,16 @@ def viewTweets():
         plt.axis("off")
         # plt.show()
         fig = plt.gcf()
-        # fig.set_size_inches(18.5, 14.5, forward=True)
-        
+        fig.set_size_inches(18.5, 14.5, forward=True)
         fig.savefig('static/img/wordcloud/' + filename, dpi=250)
-        plt.clf()
+#         plt.clf()
+        plt.close()
 
     img_url = "/static/img/wordcloud/"+filename
 
     # Finish generate html content and wordcloud
 
-    return render_template("emotion_tweets.html", user = str(user_list[index]).decode('utf-8'), user_info_dict = user_info_dict[str(user_list[index])], htmlTweets = str(html_content).decode('utf-8'), img_url = img_url, tweets_list = tweets_list, index=index)
+    return render_template("emotion_tweets.html", user = user, user_info_dict = user_info_dict[str(user)], htmlTweets = str(html_content).decode('utf-8'), img_url = img_url, tweets_list = tweets_list, index=index)
 
 
 
