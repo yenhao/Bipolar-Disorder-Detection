@@ -157,7 +157,7 @@
         .tickSize(-scatter_width);    
 
     var scatter_color = function(val){
-      var colours = ['#38d199','#efc640','#ff7c7c','#9bd6d7'];
+      var colours = ['#38d199','#ffc76b','#ff7c7c','#9bd6d7'];
       if (val > 0) {
         return colours[0];
       } else if (val > -1) {
@@ -181,7 +181,7 @@
     var zoomBeh = d3.behavior.zoom()
         .x(scatter_xScale)
         // .y(scatter_yScale)
-        .scaleExtent([0, 500])
+        .scaleExtent([0, 800])
         .on("zoom", function(){
           scatter_zoom();
 
