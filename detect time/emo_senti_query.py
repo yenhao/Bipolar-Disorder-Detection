@@ -182,15 +182,15 @@ for user_tweets in user_tweets_list:
     user_name = user_tweets[1][0]
     # Check if file dulpicate
     # if exist means duplicate
-    if os.path.exists(output_folder + user_name + '.csv'): 
+    if os.path.exists(output_folder + user_name): 
         print('Duplicate! ' + user_name)
         continue
 
 #     Change Index to tweet time
     user_tweets.index = user_tweets.set_index(2).index.astype('datetime64[ns]')
 #     Filter the time > 15month
-    user_tweets = user_tweets[user_tweets.index >= user_tweets.index[1] - timedelta(weeks = 65)]
-    print('Query user : {}, Tweets : {}'.format( user_name, user_tweets.shape[0]))
+    user_tweets = user_tweets[user_tweets.index >= user_tweets.index[0] - timedelta(weeks = 65)]
+    print('\n{} - Query user : {}, Tweets : {}\n'.format( datetime.now().strftime("%Y/%m/%d %H:%M:%S"), user_name, user_tweets.shape[0]))
 #     Sentiment Query & Emotion Query
     senti_array, emo1_array, emo2_array, amb_array = [], [], [], []
 
